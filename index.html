@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mara Survivor — Roguelite Pixel Art con IA</title>
+  <meta name="description" content="Mara Survivor: juego roguelite de supervivencia estilo pixel art retro. 15 minutos en directo, cero currículums enviados y derrota a la burocracia.">
+  <meta name="keywords" content="mara survivor, pixel art, roguelite, indie game, pixel game, stream game">
+  <meta name="theme-color" content="#14141a">
+  <meta property="og:title" content="Mara Survivor">
+  <meta property="og:description" content="Sobrevive 15 minutos al directorio y la burocracia sin mandar un solo CV.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2314141a'/%3E%3Cpath d='M3 12V4h2l3 4 3-4h2v8h-2V7l-3 4-3-4v5z' fill='%239146ff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" width="640" height="360"></canvas>
+    <div id="vignette" class="hidden"></div>
+
+    <div id="hud" class="hidden">
+      <div id="hud-top">
+        <div id="hp-wrap" class="hud-block">
+          <div class="hud-label">
+            <span class="hud-kicker">VIDA</span>
+            <span id="hp-text">160/160</span>
+          </div>
+          <div id="hp-bar"><div id="hp-fill"></div></div>
+        </div>
+
+        <div class="clock-wrap">
+          <div class="clock-kicker">SUBATHON &middot; EN VIVO</div>
+          <div id="clock">00:00</div>
+          <div id="goal">OBJETIVO: 15:00 &middot; DERROTA A LA BUROCRACIA</div>
+        </div>
+
+        <div id="lvl-wrap" class="hud-block">
+          <div class="hud-label">
+            <span class="hud-kicker">NIVEL</span>
+            <span id="lvl-text">NIV 1</span>
+          </div>
+          <div id="xp-pct"></div>
+          <div id="xp-bar"><div id="xp-fill"></div></div>
+        </div>
+      </div>
+
+      <div id="boss-hud" class="hidden">
+        <div id="boss-name">MANAGER TOXICO</div>
+        <div id="boss-track"><div id="boss-fill"></div></div>
+      </div>
+
+      <div id="weapon-slots"></div>
+      <div id="kill-counter">0 bajas</div>
+      <div id="reroll-hud"></div>
+    </div>
+
+    <div id="announce" class="hidden"></div>
+    <div id="subtitle" class="hidden"></div>
+
+    <div id="menu" class="screen hidden">
+      <div class="panel menu-panel">
+        <div class="logo">
+          <div class="logo-sub">SUBATHON &middot; EN VIVO</div>
+          <h1>MARA<span>SURVIVOR</span></h1>
+          <div class="tagline">SOBREVIVE AL DIRECTORIO</div>
+          <div class="goal">15 minutos. Cero curr&iacute;culums enviados. Derrota a la burocracia.</div>
+        </div>
+        <div class="menu-meta">
+          <div id="menu-bits">BITS: 0</div>
+          <div id="menu-stats"></div>
+        </div>
+        <button id="btn-play" class="btn big">JUGAR<small>INICIAR DIRECTO</small></button>
+        <div class="menu-secondary">
+          <button id="btn-shop" class="btn">TIENDA</button>
+          <button id="btn-how" class="btn">C&Oacute;MO JUGAR</button>
+          <button id="btn-char" class="btn">PERSONAJE: <b id="char-name">MISSPOLAROID</b></button>
+        </div>
+        <div class="credits">WASD / flechas: moverte &middot; M: sonido &middot; ESC: pausar &middot; guarda tu progreso</div>
+      </div>
+    </div>
+
+    <div id="howto" class="screen hidden">
+      <div class="panel">
+        <h2>C&Oacute;MO JUGAR</h2>
+        <div class="howto-grid">
+          <div><b>MOVERSE</b><span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span> o flechas</div>
+          <div><b>DISPARAR</b>Las armas atacan solas. T&uacute; solo esquiva.</div>
+          <div><b>POLAROIDS</b>Recoge XP para subir de nivel y elegir mejoras.</div>
+          <div><b>BITS</b>Aparecen al matar enemigos. Se gastan en la tienda.</div>
+          <div><b>COFRES</b>Los cofres dan recompensas y objetos raros.</div>
+          <div><b>OBJETIVO</b>Aguanta 15:00 y derrota a la BUROCRACIA.</div>
+          <div><b>PAUSA</b><kbd>ESC</kbd> para pausar o consultar tu build.</div>
+          <div><b>SONIDO</b><kbd>M</kbd> para activar o desactivar el sonido.</div>
+          <div><b>SUERTE</b>M&aacute;s suerte: m&aacute;s XP, m&aacute;s Bits y m&aacute;s cofres.</div>
+        </div>
+        <button id="btn-how-back" class="btn">VOLVER</button>
+      </div>
+    </div>
+
+    <div id="shop" class="screen hidden">
+      <div class="panel wide">
+        <div class="shop-head">
+          <h2>TIENDA</h2>
+          <div id="shop-bits">BITS: 0</div>
+        </div>
+        <p class="kicker">Las compras se guardan entre partidas.</p>
+        <div id="shop-list"></div>
+        <button id="btn-shop-back" class="btn">VOLVER</button>
+      </div>
+    </div>
+
+    <div id="levelup" class="screen hidden">
+      <div class="panel wide">
+        <h2 id="levelup-title">&iexcl;SUBIDA DE NIVEL!</h2>
+        <div id="cards"></div>
+        <div id="levelup-actions">
+          <button id="btn-reroll" class="btn small">REROLL (<span id="reroll-count">0</span>)</button>
+          <button id="btn-skip" class="btn small">SALTAR (<span id="skip-count">0</span>)</button>
+        </div>
+        <div id="levelup-hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> elegir &middot; <kbd>R</kbd> reroll &middot; <kbd>S</kbd> saltar</div>
+      </div>
+    </div>
+
+    <div id="chest" class="screen hidden">
+      <div class="panel">
+        <h2 id="chest-title">&iexcl;COFRE DE SUSCRIPTOR!</h2>
+        <div id="chest-items"></div>
+        <div id="chest-hint">Pulsa <kbd>Enter</kbd> para recoger.</div>
+        <button id="btn-chest-ok" class="btn big">RECOGER</button>
+      </div>
+    </div>
+
+    <div id="pause" class="screen hidden">
+      <div class="panel">
+        <h2>PAUSA</h2>
+        <div id="pause-build"></div>
+        <div class="pause-actions">
+          <button id="btn-resume" class="btn">CONTINUAR</button>
+          <button id="btn-quit" class="btn">SALIR AL MEN&Uacute;</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gameover" class="screen hidden">
+      <div class="panel">
+        <h2 class="dead">FIN DEL DIRECTO</h2>
+        <div id="go-stats" class="stats"></div>
+        <div id="go-bits">BITS TOTALES: 0</div>
+        <div class="result-actions">
+          <button id="btn-retry" class="btn">REINICIAR</button>
+          <button id="btn-go-menu" class="btn">MEN&Uacute;</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="victory" class="screen hidden">
+      <div class="panel">
+        <h2 class="win">&iexcl;DIRECTO FINALIZADO!</h2>
+        <div id="vic-stats" class="stats"></div>
+        <div id="vic-bits">BITS TOTALES: 0</div>
+        <div class="result-actions">
+          <button id="btn-vic-retry" class="btn">REINICIAR</button>
+          <button id="btn-vic-menu" class="btn">MEN&Uacute;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/sprites.js"></script>
+  <script src="js/ai_backend.js"></script>
+  <script src="js/enemy_generator.js"></script>
+  <script src="js/emotes.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/upgrades.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/enemies.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

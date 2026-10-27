@@ -1,0 +1,58 @@
+# Node modules
+node_modules/
+.pnp/
+
+# Editor files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.nt*
+.sw?
+.DS_Store
+._*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing & QA outputs
+tests/out/
+*.png.tmp
+coverage/
+
+# Environment variables (SENSITIVE - NO SUBIR)
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+*.bak
+*.swp
+*~
+
+# IDE specific
+*.project
+.settings/
+bin/
+
+# Backup and version control backups
+*.pem
+*.key
+*.p12
+.id_rsa
+*.jks
+
+# AI Model configs (SENSITIVE)
+.ollama/
+.llm/
+
+# Sensitive documentation files
+AGENTS.md

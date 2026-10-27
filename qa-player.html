@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2314141a'/%3E%3Cpath d='M3 12V4h2l3 4 3-4h2v8h-2V7l-3 4-3-4v5z' fill='%239146ff'/%3E%3C/svg%3E">
+<title>QA — Jugador</title>
+<style>
+  body { background:#14141a; color:#c9c9d4; font:12px/1.4 monospace; padding:12px 16px; margin:0; }
+  h2 { color:#9146ff; font-size:13px; margin:10px 0 4px; border-bottom:1px solid #333; padding-bottom:3px; }
+  .row { display:flex; align-items:flex-end; gap:18px; flex-wrap:wrap; }
+  .cell { text-align:center; }
+  .cell div { margin-top:3px; color:#777; font-size:10px; }
+  canvas { image-rendering: pixelated; background:#22222b; outline:1px solid #333; }
+</style>
+</head>
+<body>
+<h2>MissPolaroid — sprites</h2>
+<div class="row" id="miso"></div>
+<h2>Alejandro</h2>
+<div class="row" id="alex"></div>
+
+<script src="js/sprites.js"></script>
+<script>
+Sprites.init();
+const SCALE = 8;
+
+function composed(headName, bodyName, headScale) {
+  const body = Sprites.get(bodyName);
+  const head = Sprites.get(headName);
+  const hs = headScale || 1;
+  const hw = head.width * hs, hh = head.height * hs;
+  const above = Math.max(0, hh - 4);
+  const w = Math.max(16, Math.ceil(hw));
+  const c = document.createElement('canvas');
+  c.width = w * SCALE;
+  c.height = (body.height + above) * SCALE;
+  const x = c.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  const bodyY = above;
+  const headY = bodyY + 4 - hh;
+  x.fillStyle = 'rgba(0,0,0,0.18)';
+  x.beginPath(); x.ellipse(c.width/2, (bodyY + body.height - 2) * SCALE, 8*SCALE, 2*SCALE, 0, 0, Math.PI*2); x.fill();
+  x.drawImage(body, (w - body.width)/2 * SCALE, bodyY * SCALE, body.width * SCALE, body.height * SCALE);
+  x.drawImage(head, (w - hw)/2 * SCALE, headY * SCALE, hw * SCALE, hh * SCALE);
+  return c;
+}
+
+function cell(parent, canvas, label) {
+  const d = document.createElement('div');
+  d.className = 'cell';
+  d.appendChild(canvas);
+  const l = document.createElement('div');
+  l.textContent = label;
+  d.appendChild(l);
+  document.getElementById(parent).appendChild(d);
+}
+
+[
+  ['p_head_down', 'p_body_down0', 'down f0'],
+  ['p_head_down', 'p_body_down1', 'down f1'],
+  ['p_head_down2', 'p_body_down0', 'parpadeo'],
+  ['p_head_down_hurt', 'p_body_down0', 'daño'],
+  ['p_head_down_fl', 'p_body_down0', 'flequillo'],
+  ['p_head_up', 'p_body_up0', 'up f0'],
+  ['p_head_up', 'p_body_up1', 'up f1'],
+  ['p_head_side', 'p_body_side0', 'side f0'],
+  ['p_head_side', 'p_body_side1', 'side f1'],
+  ['p_head_side', 'p_body_side2', 'side f2'],
+  ['p_head_side', 'p_body_side3', 'side f3'],
+  ['p_head_down', 'p_body_down0', 'cabeza x1.8'],
+].forEach(([h, b, l], i) => cell('miso', composed(h, b, i === 11 ? 1.8 : 1), l));
+
+[
+  ['a_head_down', 'a_body_down0', 'down f0'],
+  ['a_head_down', 'a_body_down1', 'down f1'],
+  ['a_head_down_hurt', 'a_body_down0', 'daño'],
+  ['a_head_side', 'a_body_side0', 'side f0'],
+  ['a_head_side', 'a_body_side2', 'side f2'],
+].forEach(([h, b, l]) => cell('alex', composed(h, b), l));
+</script>
+</body>
+</html>
