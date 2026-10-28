@@ -54,5 +54,13 @@ bin/
 .ollama/
 .llm/
 
-# Sensitive documentation files
+# Sensitive / internal documentation (not published)
 AGENTS.md
+README_IA.md
+research/*.md
+assets/sprites_catalog.md
+.opencode/
+
+# Keep the public README and license
+!README.md
+!LICENSE

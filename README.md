@@ -9,7 +9,6 @@
 **Un juego de aventura pixel art con inteligencia artificial para NPCs y generación procedimental**
 
 [![Demo](https://img.shields.io/badge/Demo-Available-blue)](#)
-[![Documentation](https://img.shields.io/badge/docs-Read%20more-red)](README_IA.md)
 
 </div>
 
