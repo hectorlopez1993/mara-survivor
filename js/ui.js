@@ -58,6 +58,7 @@ window.UI = (function () {
   const $ = (id) => document.getElementById(id);
   const el = {
     hud: $('hud'), menu: $('menu'), howto: $('howto'), shop: $('shop'),
+    ranking: $('ranking'),
     levelup: $('levelup'), chest: $('chest'), pause: $('pause'),
     gameover: $('gameover'), victory: $('victory'),
     hpFill: $('hp-fill'), hpText: $('hp-text'), clock: $('clock'),
@@ -75,12 +76,13 @@ window.UI = (function () {
     bossHud: $('boss-hud'), bossName: $('boss-name'), bossFill: $('boss-fill'),
   };
 
-  const SCREENS = ['menu', 'howto', 'shop', 'levelup', 'chest', 'pause', 'gameover', 'victory'];
+  const SCREENS = ['menu', 'howto', 'shop', 'ranking', 'levelup', 'chest', 'pause', 'gameover', 'victory'];
 
   function hideAllScreens() { SCREENS.forEach(s => el[s].classList.add('hidden')); }
   function show(id) { hideAllScreens(); el[id].classList.remove('hidden'); }
 
   let announceTimer = null, subTimer = null;
+  let lastKills = -1;
 
   function announce(text, bad) {
     el.announce.textContent = text;
@@ -103,6 +105,8 @@ window.UI = (function () {
   let hurtTimer = null;
   function lowHP(on) {
     el.vignette.classList.toggle('low', !!on);
+    const wrap = document.getElementById('hp-wrap');
+    if (wrap) wrap.classList.toggle('low', !!on);
     if (on) el.vignette.classList.remove('hidden');
     else if (!el.vignette.classList.contains('hurt')) el.vignette.classList.add('hidden');
   }
@@ -128,7 +132,7 @@ window.UI = (function () {
   function updateBoss(boss) {
     if (!boss) { el.bossHud.classList.add('hidden'); return; }
     el.bossHud.classList.remove('hidden');
-    el.bossName.textContent = boss.type === 'burocracia' ? 'LA BUROCRACIA SUPREMA' : 'MANAGER TÓXICO';
+    el.bossName.textContent = boss.type === 'burocracia' ? 'LA BUROCRACIA SUPREMA' : 'EL PICAO';
     const pct = Math.max(0, Math.min(100, boss.hp / boss.maxHp * 100));
     el.bossFill.style.width = pct + '%';
     el.bossHud.classList.toggle('danger', pct < 30);
@@ -144,6 +148,14 @@ window.UI = (function () {
     el.xpFill.style.width = xpPct + '%';
     if (el.xpPct) el.xpPct.textContent = xpPct + '%';
     el.lvlText.textContent = 'NIV ' + p.level;
+    if (kills !== lastKills) {
+      if (lastKills >= 0 && kills > lastKills) {
+        el.kills.classList.remove('bump');
+        void el.kills.offsetWidth;
+        el.kills.classList.add('bump');
+      }
+      lastKills = kills;
+    }
     el.kills.textContent = kills + (kills === 1 ? ' baja' : ' bajas');
     const parts = [];
     if (rerolls) parts.push('R' + rerolls);
@@ -190,12 +202,14 @@ window.UI = (function () {
     }
     opts.forEach((o, i) => {
       const c = document.createElement('div');
-      c.className = 'card' + (o.isNew ? ' new' : '');
+      const isEvo = o.pick && o.pick.kind === 'evolve';
+      c.className = 'card' + (o.isNew ? ' new' : '') + (isEvo ? ' evo' : '');
+      c.setAttribute('data-kind', isEvo ? 'evolve' : (o.type === 'pasiva' ? 'passive' : o.type || 'weapon'));
       c.tabIndex = 0;
       c.setAttribute('role', 'button');
       const reward = o.pick.kind === 'bits' || o.pick.kind === 'heal';
-      const typeText = reward ? 'RECOMPENSA' : (o.type === 'pasiva' ? 'PASIVA' : 'ARMA');
-      const lvlText = reward ? '1 uso' : (o.isNew ? 'Nv 1' : o.level + ' → ' + (o.level + 1));
+      const typeText = isEvo ? 'EVOLUCIÓN' : (reward ? 'RECOMPENSA' : (o.type === 'pasiva' ? 'PASIVA' : 'ARMA'));
+      const lvlText = isEvo ? '★' : (reward ? '1 uso' : (o.isNew ? 'Nv 1' : o.level + ' → ' + (o.level + 1)));
       const pips = (!reward && o.max) ? '<div class="pips">' + '◆'.repeat(Math.min(o.level, o.max)) + '◇'.repeat(Math.max(0, o.max - Math.min(o.level, o.max))) + '</div>' : '';
       c.innerHTML =
         '<div class="key" aria-hidden="true">' + (i + 1) + '</div>' +
@@ -292,6 +306,9 @@ window.UI = (function () {
   function gameOver(stats, retryCb, menuCb, flavor) {
     el.goStats.innerHTML = (flavor ? '<p class="flavor">' + flavor + '</p>' : '') + statsHTML(stats);
     el.goBits.textContent = 'BITS TOTALES: ' + meta.bits;
+    const note = $('go-rank-note'); if (note) note.textContent = '';
+    const rankBtn = $('btn-go-rank');
+    if (rankBtn) rankBtn.onclick = () => { AudioFX.click(); if (window.Ranking) Ranking.open(); };
     $('btn-retry').onclick = () => { AudioFX.click(); retryCb(); };
     $('btn-go-menu').onclick = () => { AudioFX.click(); menuCb(); };
     show('gameover');
@@ -300,9 +317,17 @@ window.UI = (function () {
   function victory(stats, retryCb, menuCb, flavor) {
     el.vicStats.innerHTML = (flavor ? '<p class="flavor">' + flavor + '</p>' : '') + statsHTML(stats);
     el.vicBits.textContent = 'BITS TOTALES: ' + meta.bits;
+    const note = $('vic-rank-note'); if (note) note.textContent = '';
+    const rankBtn = $('btn-vic-rank');
+    if (rankBtn) rankBtn.onclick = () => { AudioFX.click(); if (window.Ranking) Ranking.open(); };
     $('btn-vic-retry').onclick = () => { AudioFX.click(); retryCb(); };
     $('btn-vic-menu').onclick = () => { AudioFX.click(); menuCb(); };
     show('victory');
+  }
+
+  function rankNote(win, text) {
+    const n = document.getElementById(win ? 'vic-rank-note' : 'go-rank-note');
+    if (n) n.textContent = text || '';
   }
 
   // ---------------- MENU ----------------
@@ -373,7 +398,7 @@ window.UI = (function () {
     meta, save, addBits,
     show, hideAllScreens, hud, announce, subtitle,
     updateHUD, updateSlots, renderLevelUp, renderChest, renderPause,
-    gameOver, victory, renderMenu, renderShop, on,
+    gameOver, victory, renderMenu, renderShop, on, rankNote,
     updateBoss, lowHP, damageFlash, handleKey,
     el,
   };

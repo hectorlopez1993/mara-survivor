@@ -10,7 +10,7 @@ window.Enemies = (function () {
     email:     { hp: 16,  speed: 30, dmg: 6,  r: 8,  xp: 2,  spr: 'email',     w: 16, h: 12, ranged: true, range: 150, cd: 2.4 },
     empresa:   { hp: 90,  speed: 24, dmg: 16, r: 13, xp: 7,  spr: 'empresa',   w: 20, h: 21, tank: true },
     practicas: { hp: 70,  speed: 78, dmg: 12, r: 8,  xp: 12, spr: 'practicas', w: 16, h: 17, elite: true },
-    manager:   { hp: 380, speed: 30, dmg: 22, r: 17, xp: 45, spr: 'manager',   w: 22, h: 27, boss: true },
+    picao:     { hp: 380, speed: 30, dmg: 22, r: 17, xp: 45, spr: 'picao',     w: 22, h: 27, boss: true },
     manifestante:{ hp: 48, speed: 46, dmg: 12, r: 10, xp: 6, spr: 'manifestante', w: 19, h: 21 },
     burocracia:{ hp: 1800,speed: 22, dmg: 32, r: 21, xp: 120,spr: 'burocracia',w: 25, h: 23, boss: true },
   };
@@ -30,14 +30,21 @@ window.Enemies = (function () {
 
   let eproj = [];   // proyectiles enemigos
   let spawnT = 0, eliteT = 0, bossMinDone = new Set(), finalSpawned = false;
-  let lastMin = 0, mgrTauntI = 0;
+  let lastMin = 0, picaoTauntI = 0;
 
-  // el Manager Tóxico ataca con su peor arma: el contrato
-  const MGR_TAUNTS = [
-    '"¡TE OFREZCO PLANTA FIJA!"',
-    '"¡VEN A LA ENTREVISTA, QUE ES HOY!"',
-    '"¡ENCHÚFATE, QUE EL EQUIPO NECESITA!"',
-    '"¡Y ESE CV CON HUECOS, QUÉ ME CUENTAS!"',
+  // El PICAO: el pesado del chat que no acepta un no. Ataca con su peor
+  // arma, el mensaje privado insistente.
+  const PICAO_TAUNTS = [
+    '"TE DONÉ 1000€. HAZME CASO."',
+    '"QUÍTAME LA DENUNCIA, VA."',
+    '"¿DÓNDE VIVES? ES PARA UN REGALO."',
+    '"NO ES ACOSO, ES INSISTENCIA."',
+    '"TENGO 12 CUENTAS MÁS."',
+    '"RESPÓNDEME AL DM. POR FAVOR."',
+    '"TE HE VISTO EN EL DIRECTO."',
+    '"ME DEBES UNA EXPLICACIÓN."',
+    '"ESTOY EN EL PARKING. SAL."',
+    '"NO ME IGNORES, QUE ME PONGO TRISTE."',
   ];
 
   // hitos por minuto (sin minutos de boss: 3, 6, 9, 12)
@@ -56,7 +63,7 @@ window.Enemies = (function () {
 
   function reset() {
     eproj = []; spawnT = 1.5; eliteT = 120; bossMinDone = new Set(); finalSpawned = false;
-    lastMin = 0; mgrTauntI = 0;
+    lastMin = 0; picaoTauntI = 0;
   }
 
   function waveComp(minute) {
@@ -151,25 +158,25 @@ window.Enemies = (function () {
     for (const m of [3, 6, 9, 12]) {
       if (minute >= m && !bossMinDone.has(m) && g.time < 15 * 60 - 1) {
         bossMinDone.add(m);
-        if (g.enemies.some(x => x.type === 'manager' && x.hp > 0)) {
-          UI.subtitle('El Manager sigue en pie: no piensa firmar nada.');
+        if (g.enemies.some(x => x.type === 'picao' && x.hp > 0)) {
+          UI.subtitle('El Picao sigue en pie: no piensa quitarse de tu chat.');
           continue;
         }
         const p = spawnPos(g);
-        const b = create(g, 'manager', p.x, p.y);
+        const b = create(g, 'picao', p.x, p.y);
         b.hp *= 1 + (m / 6); b.maxHp = b.hp;
         AudioFX.boss();
-        UI.announce('¡MANAGER TÓXICO!', true);
-        UI.subtitle('"Necesito esto para ayer." — Manager Tóxico');
+        UI.announce('¡EL PICAO!', true);
+        UI.subtitle('"Te doné 1000€, hazme caso." — El Picao');
       }
     }
 
     // boss final a los 15:00
     if (g.time >= 15 * 60 && !finalSpawned) {
       finalSpawned = true;
-      // los managers huyen para dejar sitio al jefe final
+      // los picaos huyen para dejar sitio al jefe final
       for (let i = g.enemies.length - 1; i >= 0; i--) {
-        if (g.enemies[i].type === 'manager') g.enemies.splice(i, 1);
+        if (g.enemies[i].type === 'picao') g.enemies.splice(i, 1);
       }
       const p = spawnPos(g);
       create(g, 'burocracia', p.x, p.y);
@@ -235,7 +242,7 @@ window.Enemies = (function () {
       if (e.t.boss) {
         e.atkT -= dt;
         if (e.atkT <= 0 && !e.pending) {
-          if (e.type === 'manager') {
+          if (e.type === 'picao') {
             e.atkT = 4;
             e.pending = { kind: 'wave', t: 0.45 };
           } else {
@@ -291,7 +298,7 @@ window.Enemies = (function () {
     e.pending = null;
     if (kind === 'wave') {
       bossWave(g, e, 70, e.dmg * 0.7, '#ff5f7e');
-      UI.subtitle(MGR_TAUNTS[mgrTauntI++ % MGR_TAUNTS.length]);
+      UI.subtitle(PICAO_TAUNTS[picaoTauntI++ % PICAO_TAUNTS.length]);
     } else if (kind === 'burst') {
       for (let k = 0; k < 10; k++) {
         const a = (k / 10) * Math.PI * 2;

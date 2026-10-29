@@ -15,6 +15,8 @@ window.Particles = (function () {
   // --- GESTOR DE VIDA ---
   Particles.active = [];
 
+  let ambientT = 0.5;
+
   function register(particle, life) {
     if (Particles.active.length >= MAX_PARTICLES) return false;
     particle.life = life || 1.0;
@@ -27,6 +29,26 @@ window.Particles = (function () {
   function update(dt, game) {
     if (typeof dt !== 'number' || dt <= 0) return;
     const dtClamped = Math.min(dt, 0.1);
+
+    // motas ambientales alrededor del jugador (vida en el escenario)
+    if (game && game.player && game.state === 'playing') {
+      ambientT -= dtClamped;
+      if (ambientT <= 0) {
+        ambientT = 0.22 + Math.random() * 0.3;
+        const a = Math.random() * Math.PI * 2;
+        const r = 50 + Math.random() * 150;
+        register({
+          kind: 'mote',
+          x: game.player.x + Math.cos(a) * r,
+          y: game.player.y + Math.sin(a) * r,
+          vx: (Math.random() - 0.5) * 7,
+          vy: -4 - Math.random() * 6,
+          color: Math.random() < 0.18 ? '#bf94ff' : '#8f84ad',
+          size: 1,
+          drag: 1,
+        }, 2.4 + Math.random() * 1.6);
+      }
+    }
 
     const shake = (game && game.shake) || 0;
     if (shake > 1 && game.player) {
@@ -122,6 +144,10 @@ window.Particles = (function () {
       } else if (p.kind === 'dust') {
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x - 1, p.y - 1, p.size, p.size);
+      } else if (p.kind === 'mote') {
+        ctx.globalAlpha = Math.max(0, (1 - progress) * 0.5);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
       }
     }
     ctx.globalAlpha = 1;

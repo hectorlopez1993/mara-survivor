@@ -135,6 +135,7 @@ window.Game = (function () {
     if (t.boss && e.type === 'burocracia') triggerVictory();
     if (t.boss) UI.updateBoss(G.enemies.find(x => x.t.boss && x.hp > 0) || null);
     if (t.elite) UI.subtitle('💀 Cofre de suscriptor: ¡recógelo!');
+    if (e.type === 'picao') UI.subtitle('El Picao se ha ido a llorar a otro chat.');
   }
 
   function dropPickup(kind, x, y, val) {
@@ -296,6 +297,13 @@ window.Game = (function () {
       UI.gameOver(st, retry, back, st.time >= 9 * 60
         ? 'Te pillaron a un paso del subathon... y el CV ya volaba a la papelera.'
         : 'Te han pillado pronto: mañana, entrevista a las 9:00.');
+    }
+    // se envía después de pintar la pantalla para que el aviso no lo borre
+    if (window.Ranking) {
+      UI.rankNote(win, 'Enviando resultado al ranking…');
+      Ranking.submit(st, win)
+        .then((res) => UI.rankNote(win, Ranking.describe(res)))
+        .catch(() => UI.rankNote(win, 'Ranking no disponible (modo offline).'));
     }
   }
 
@@ -539,6 +547,15 @@ window.Game = (function () {
 
     ctx.save();
     ctx.translate(-camX, -camY);
+
+    // halo cálido alrededor del jugador (profundidad, sin coste de blur)
+    if (G.player) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(Sprites.lightEl(),
+        Math.round(G.player.x) - 80, Math.round(G.player.y) - 74, 160, 160);
+      ctx.restore();
+    }
 
     // ---- obstáculos ----
     for (const o of G.obstacles) {

@@ -64,3 +64,9 @@ assets/sprites_catalog.md
 # Keep the public README and license
 !README.md
 !LICENSE
+
+# Ranking data (runtime, never commit scores)
+api/data/scores.php
+api/data/rate.php
+api/data/.lock
+api/data/*.tmp*

@@ -123,7 +123,7 @@ global.window.innerWidth = 1280;
 global.window.innerHeight = 720;
 
 // ---------------- cargar scripts reales ----------------
-const scripts = ['sprites', 'emotes', 'audio', 'ui', 'upgrades', 'weapons', 'enemies', 'player', 'game', 'main'];
+const scripts = ['sprites', 'emotes', 'audio', 'ui', 'ranking', 'upgrades', 'weapons', 'enemies', 'player', 'game', 'main'];
 for (const s of scripts) {
   const file = path.join(root, 'js', s + '.js');
   vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: file });
@@ -201,7 +201,7 @@ for (const id in Upgrades.PASSIVES) {
   if (!Sprites.iconData(d.icon)) missing.push('icon passive ' + id);
 }
 check('todos los iconos de armas/pasivas existen', missing.length === 0, missing.join(', '));
-const enemySprites = ['form', 'contrato', 'cv', 'email', 'empresa', 'practicas', 'manager', 'manifestante', 'burocracia'];
+const enemySprites = ['form', 'contrato', 'cv', 'email', 'empresa', 'practicas', 'picao', 'manifestante', 'burocracia'];
 check('sprites de enemigos completos', enemySprites.every((n) => !!Sprites.get(n)));
 const playerSprites = ['head_down', 'head_down2', 'head_down_hurt', 'head_up', 'head_side',
   'body_down0', 'body_down1', 'body_up0', 'body_up1', 'body_side0', 'body_side1', 'body_side2', 'body_side3'];
@@ -209,7 +209,23 @@ check('sprites del jugador completos', ['p_', 'a_'].every((pre) => playerSprites
 const headDown = Sprites.get('p_head_down'), bodyDown = Sprites.get('p_body_down0');
 check('medidas del jugador 16x13 + 16x12', headDown.width === 16 && headDown.height === 13 &&
   bodyDown.width === 16 && bodyDown.height === 12);
-check('flash cacheado', !!Sprites.flash('manager'));
+check('flash cacheado', !!Sprites.flash('picao'));
+
+// Pasiva Flequillo: todas las direcciones y estados deben existir
+const fringe = ['p_head_down', 'p_head_up', 'p_head_side', 'p_head_down2',
+  'p_head_down_hurt', 'p_head_up2', 'a_head_down', 'a_head_side'];
+const flMissing = fringe.filter((n) => !Sprites.get(n + '_fl'));
+check('variantes de flequillo generadas', flMissing.length === 0, flMissing.join(', '));
+check('flequillo has() coherente', fringe.every((n) => Sprites.has(n + '_fl')));
+const flDown = Sprites.get('p_head_down_fl'), baseDown = Sprites.get('p_head_down');
+check('flequillo respeta el tamaño', !!flDown && flDown.width === baseDown.width && flDown.height === baseDown.height);
+check('flequillo cambia el sprite', !!flDown && flDown !== baseDown);
+
+// El PICAO sustituye al antiguo Manager
+check('tipo picao definido', !!Enemies.TYPES.picao);
+check('manager ya no existe', !Enemies.TYPES.manager);
+check('el picao es boss', !!(Enemies.TYPES.picao && Enemies.TYPES.picao.boss));
+check('cliente de ranking cargado', !!global.Ranking && typeof global.Ranking.submit === 'function');
 
 console.log('\n3) reset y HUD');
 Game.reset();
@@ -262,12 +278,12 @@ Game.reset();
 Game.time = 3 * 60;
 step(2);
 Game.player.hp = 99999;
-let managers = Game.enemies.filter((e) => e.type === 'manager').length;
-check('spawn del primer manager', managers === 1, managers);
+let picaos = Game.enemies.filter((e) => e.type === 'picao').length;
+check('spawn del primer picao', picaos === 1, picaos);
 Game.time = 6 * 60;
 step(2);
-managers = Game.enemies.filter((e) => e.type === 'manager').length;
-check('no se apilan managers', managers === 1, managers);
+picaos = Game.enemies.filter((e) => e.type === 'picao').length;
+check('no se apilan picaos', picaos === 1, picaos);
 
 console.log('\n7) cola levelup + cofre en el mismo frame');
 Game.reset();

@@ -22,6 +22,8 @@
 <div class="row" id="alex"></div>
 <h2>Enemigos</h2>
 <div class="row" id="enemigos"></div>
+<h2>Flequillo (pasiva)</h2>
+<div class="row" id="flequillo"></div>
 <h2>Iconos (cartas de mejora)</h2>
 <div class="row" id="iconos"></div>
 <h2>Cabeza gigante (pasiva ×1.8)</h2>
@@ -88,6 +90,9 @@ const miso = [
   ['p_head_side', 'p_body_side1', 'side f1'],
   ['p_head_side', 'p_body_side2', 'side f2'],
   ['p_head_side', 'p_body_side3', 'side f3'],
+  ['p_head_up_fl', 'p_body_up0', 'flequillo up'],
+  ['p_head_side_fl', 'p_body_side0', 'flequillo side'],
+  ['p_head_down2_fl', 'p_body_down0', 'flequillo parpadeo'],
 ];
 miso.forEach(([h, b, l]) => cell('miso', composedCanvas('', h, b), l));
 
@@ -100,8 +105,13 @@ const alex = [
 ];
 alex.forEach(([h, b, l]) => cell('alex', composedCanvas('', h, b), l));
 
-['contrato', 'practicas', 'manager', 'form', 'email', 'cv', 'empresa', 'burocracia']
-  .forEach(n => cell('enemigos', plain(n, n === 'burocracia' || n === 'manager' ? 3 : 5), n));
+['contrato', 'practicas', 'picao', 'form', 'email', 'cv', 'empresa', 'burocracia']
+  .forEach(n => cell('enemigos', plain(n, n === 'burocracia' || n === 'picao' ? 3 : 5), n));
+
+// Pasiva Flequillo: las variantes _fl se generan sobre la cabeza base
+['p_head_down_fl', 'p_head_up_fl', 'p_head_side_fl', 'p_head_down2_fl',
+ 'p_head_down_hurt_fl', 'a_head_down_fl', 'a_head_side_fl']
+  .forEach(n => cell('flequillo', plain(n, 6), n));
 
 ['cabeza', 'flequillo', 'alejandro', 'vida', 'bits', 'grito', 'micro', 'polaroid']
   .forEach(n => cell('iconos', plain('ic_' + n, 6), 'ic_' + n));

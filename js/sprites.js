@@ -1,7 +1,7 @@
 window.Sprites = (function () {
   'use strict';
 
-  const PLAYER_GRIDS = {"p_head_down":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhsssssssshhW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...hhSSSSSShh..."],"p_body_down0":["..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..wkkkkkkkkkkw..","..sskkkkkkkkss..","..sskkkkkkkkss..","...uuuuuuuuuu...","...uuuuuuuuuu...","hh.uuu....uuu.hh","hh.sss.hh.sss.hh","..wwww.hh.wwww.."],"p_body_down1":["..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..wkkkkkkkkkkw..","..sskkkkkkkkss..","..sskkkkkkkkss..","...uuuuuuuuuu...","...uuuuuuuuuu...","hh.uuu....uuu.hh","hhh.ss.hh.ss.hhh","...ww.hhhh.ww..."],"p_head_down2":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhsssssssshhW.",".WWpsddssddspWW.",".WWpsddssddspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...hhSSSSSShh..."],"p_head_down_hurt":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhsssssssshhW.",".WWps.ssss.spWW.",".WWps.ssss.spWW.",".WWpsrssssrspWW.",".WWpssRRRRsspWW.","...hhSSSSSShh..."],"p_head_down_fl":["................","....WWWWWWWW....","...WWpphhppWW...","..W..........W..",".W............W.",".W......R.....W.",".Whhhhh...hhhhW.",".WhhsssssssshhW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...hhSSSSSShh..."],"p_head_up":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.","...hhSSSSSShh..."],"p_body_up0":["..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..wkkkkkkkkkkw..","..sskkkkkkkkss..","..sskkkkkkkkss..","...uuuuuuuuuu...","...uuuuuuuuuu...","hh.uuu....uuu.hh","hh.sss.hh.sss.hh","..wwww.hh.wwww.."],"p_head_up2":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.","...hhSSSSSShh..."],"p_body_up1":["..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..wkkkkkkkkkkw..","..sskkkkkkkkss..","..sskkkkkkkkss..","...uuuuuuuuuu...","...uuuuuuuuuu...","hh.uuu....uuu.hh","hhh.ss.hh.ss.hhh","...ww.hhhh.ww..."],"p_head_side":[".....dddddddd.....","...ddWWWWWWWWdd...","..ddhhWhhhhhhhdd..",".ddhhhWhhhhhhhhdd.","dhhhhhWhhhhhhhhhd.","dhhhhhWhhhhssssssd","dhhhhdWWdhhssssssd","dhhhdWWWWdhssssssd","dhhhdppppdhsssdssd","dhhhhhhhhsssdssSsd","dhhhhhhhhssrrssssd","dhhhhhhhhsssssRssd","..ddhhhhhhSSSdd..."],"p_head_side_fl":[".....dddddddd.....","...ddWWWWWWWWdd...","..ddhhWhhhhhhhdd..",".ddhhhWhhhhhhhhdd.","dhhhhhWhhhhhhhhhd.","dhhhhhWhhhhssssssd","dhhhhdWWdhhssssssd","dhhhdWWWWdhssssssd","dhhhdppppdhsssdssd","dhhhhhhhhsssdssSsd","dhhhhhhhhssRRssssd","dhhhhhhhhsssssRssd","..ddhhhhhhSSSdd..."],"p_body_side0":["...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...duuuuuuuuud....","...duuuuuuuuud....","...duuuddduuud....",".hhhdssdhhdssdhhh.",".hhhdssdhhhdssdhh.","...dwwwdhhdwwwwd.."],"p_body_side1":["...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...duuuuuuuuud....","...duuuuuuuuud....","...duuuddduuud....",".hhhdssddssdhhhhh.",".hhhdssddssdhhhhh.","...dwwwdwwwwd....."],"p_body_side2":["...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...duuuuuuuuud....","...duuuuuuuuud....","...duuuddduuud....",".hhhdssdhhdssdhhh.",".hhhdssdhhhdssdhh.","...dwwwdhhdwwwwd.."],"p_body_side3":["...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...duuuuuuuuud....","...duuuuuuuuud....","...duuuddduuud....",".hhhdssddssdhhhhh.",".hhhdssddssdhhhhh.","...dwwwdwwwwd....."],"a_head_down":["................","....WWWWWWWW....","...WWppnnppWW...","..WnnnnnnnnnnW..",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnssssssssnnW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...nnSSSSSSnn..."],"a_body_down0":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hh.sss.hh.sss.hh","..sss....sss...."],"a_body_down1":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hhh.ss.hh.ss.hhh","..sss....sss...."],"a_head_down_hurt":["................","....WWWWWWWW....","...WWppnnppWW...","..WnnnnnnnnnnW..",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnssssssssnnW.",".WWps.ssss.spWW.",".WWps.ssss.spWW.",".WWpsrssssrspWW.",".WWpssRRRRsspWW.","...nnSSSSSSnn..."],"a_body_hurt":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hh.sss.hh.sss.hh","..sss....sss...."],"a_head_side":["..................",".....WWWWWWWW.....","....nnWnnnnnnn....","...nnnWnnnnnnnn...",".nnnnnWnnnnnnnnn..",".nnnnnWnnnnssssss.",".nnnn.WW.nnssssss.",".nnn.WWWW.nssssss.",".nnn.pppp.nsssdss.",".nnnnnnnnsssdssSs.",".nnnnnnnnssrrssss.",".nnnnnnnnsssssRss.","....nnnnnnSSS....."],"a_body_side0":["...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","....ggggggggggs...","....ggggggggggs...","....bbbbbbbbb.....","....bbbbbbbbb.....","....bbb...bbb.....","..hh.ss.hh.ss.hh..",".hhh.ss.hhh.ss.hh.",".hhh.ss.hhh.ss.h.."],"a_body_side2":["...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","....ggggggggggs...","....ggggggggggs...","....bbbbbbbbb.....","....bbbbbbbbb.....","....bbb...bbb.....","..h.ss.hhhh.ss.h..",".h.ss.hhhhh.ss.hh.",".hhh.ss.hhh.ss.h.."],"a_head_down2":["................","....WWWWWWWW....","...WWppnnppWW...","..WnnnnnnnnnnW..",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnssssssssnnW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...nnSSSSSSnn..."],"a_head_down_fl":["................","....WWWWWWWW....","...WWppnnppWW...","..WnnnnnnnnnnW..",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnssssssssnnW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...nnSSSSSSnn..."],"a_head_side_fl":["..................",".....WWWWWWWW.....","....nnWnnnnnnn....","...nnnWnnnnnnnn...",".nnnnnWnnnnnnnnn..",".nnnnnWnnnnssssss.",".nnnn.WW.nnssssss.",".nnn.WWWW.nssssss.",".nnn.pppp.nsssdss.",".nnnnnnnnsssdssSs.",".nnnnnnnnssrrssss.",".nnnnnnnnsssssRss.","....nnnnnnSSS....."],"a_head_up":["................","....WWWWWWWW....","...WWppnnppWW...","..WnnnnnnnnnnW..",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnssssssssnnW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...nnSSSSSSnn..."],"a_body_side1":["...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","....ggggggggggs...","....ggggggggggs...","....bbbbbbbbb.....","....bbbbbbbbb.....","....bbb...bbb.....","..hh.ss.hh.ss.hh..",".hhh.ss.hhh.ss.hh.",".hhh.ss.hhh.ss.h.."],"a_body_side3":["...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","....ggggggggggs...","....ggggggggggs...","....bbbbbbbbb.....","....bbbbbbbbb.....","....bbb...bbb.....","..h.ss.hhhh.ss.h..",".h.ss.hhhhh.ss.hh.",".hhh.ss.hhh.ss.h.."],"a_body_up0":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hh.sss.hh.sss.hh","..sss....sss...."],"a_body_up1":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hhh.ss.hh.ss.hhh","..sss....sss...."]};
+  const PLAYER_GRIDS = {"p_head_down":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhsssssssshhW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...hhSSSSSShh..."],"p_body_down0":["..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..wkkkkkkkkkkw..","..sskkkkkkkkss..","..sskkkkkkkkss..","...uuuuuuuuuu...","...uuuuuuuuuu...","hh.uuu....uuu.hh","hh.sss.hh.sss.hh","..wwww.hh.wwww.."],"p_body_down1":["..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..wkkkkkkkkkkw..","..sskkkkkkkkss..","..sskkkkkkkkss..","...uuuuuuuuuu...","...uuuuuuuuuu...","hh.uuu....uuu.hh","hhh.ss.hh.ss.hhh","...ww.hhhh.ww..."],"p_head_down2":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhsssssssshhW.",".WWpsddssddspWW.",".WWpsddssddspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...hhSSSSSShh..."],"p_head_down_hurt":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhsssssssshhW.",".WWps.ssss.spWW.",".WWps.ssss.spWW.",".WWpsrssssrspWW.",".WWpssRRRRsspWW.","...hhSSSSSShh..."],"p_head_up":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.","...hhSSSSSShh..."],"p_body_up0":["..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..wkkkkkkkkkkw..","..sskkkkkkkkss..","..sskkkkkkkkss..","...uuuuuuuuuu...","...uuuuuuuuuu...","hh.uuu....uuu.hh","hh.sss.hh.sss.hh","..wwww.hh.wwww.."],"p_head_up2":["................","....WWWWWWWW....","...WWpphhppWW...","..WhhhhhhhhhhW..",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WhhhhhhhhhhhhW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.",".WWphhhhhhhhpWW.","...hhSSSSSShh..."],"p_body_up1":["..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..kkkkkkkkkkkk..","..wkkkkkkkkkkw..","..sskkkkkkkkss..","..sskkkkkkkkss..","...uuuuuuuuuu...","...uuuuuuuuuu...","hh.uuu....uuu.hh","hhh.ss.hh.ss.hhh","...ww.hhhh.ww..."],"p_head_side":[".....dddddddd.....","...ddWWWWWWWWdd...","..ddhhWhhhhhhhdd..",".ddhhhWhhhhhhhhdd.","dhhhhhWhhhhhhhhhd.","dhhhhhWhhhhssssssd","dhhhhdWWdhhssssssd","dhhhdWWWWdhssssssd","dhhhdppppdhsssdssd","dhhhhhhhhsssdssSsd","dhhhhhhhhssrrssssd","dhhhhhhhhsssssRssd","..ddhhhhhhSSSdd..."],"p_body_side0":["...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...duuuuuuuuud....","...duuuuuuuuud....","...duuuddduuud....",".hhhdssdhhdssdhhh.",".hhhdssdhhhdssdhh.","...dwwwdhhdwwwwd.."],"p_body_side1":["...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...duuuuuuuuud....","...duuuuuuuuud....","...duuuddduuud....",".hhhdssddssdhhhhh.",".hhhdssddssdhhhhh.","...dwwwdwwwwd....."],"p_body_side2":["...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...duuuuuuuuud....","...duuuuuuuuud....","...duuuddduuud....",".hhhdssdhhdssdhhh.",".hhhdssdhhhdssdhh.","...dwwwdhhdwwwwd.."],"p_body_side3":["...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...dkkkkkkkkkksd..","...duuuuuuuuud....","...duuuuuuuuud....","...duuuddduuud....",".hhhdssddssdhhhhh.",".hhhdssddssdhhhhh.","...dwwwdwwwwd....."],"a_head_down":["................","....WWWWWWWW....","...WWppnnppWW...","..WnnnnnnnnnnW..",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnssssssssnnW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...nnSSSSSSnn..."],"a_body_down0":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hh.sss.hh.sss.hh","..sss....sss...."],"a_body_down1":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hhh.ss.hh.ss.hhh","..sss....sss...."],"a_head_down_hurt":["................","....WWWWWWWW....","...WWppnnppWW...","..WnnnnnnnnnnW..",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnssssssssnnW.",".WWps.ssss.spWW.",".WWps.ssss.spWW.",".WWpsrssssrspWW.",".WWpssRRRRsspWW.","...nnSSSSSSnn..."],"a_body_hurt":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hh.sss.hh.sss.hh","..sss....sss...."],"a_head_side":["..................",".....WWWWWWWW.....","....nnWnnnnnnn....","...nnnWnnnnnnnn...",".nnnnnWnnnnnnnnn..",".nnnnnWnnnnssssss.",".nnnn.WW.nnssssss.",".nnn.WWWW.nssssss.",".nnn.pppp.nsssdss.",".nnnnnnnnsssdssSs.",".nnnnnnnnssrrssss.",".nnnnnnnnsssssRss.","....nnnnnnSSS....."],"a_body_side0":["...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","....ggggggggggs...","....ggggggggggs...","....bbbbbbbbb.....","....bbbbbbbbb.....","....bbb...bbb.....","..hh.ss.hh.ss.hh..",".hhh.ss.hhh.ss.hh.",".hhh.ss.hhh.ss.h.."],"a_body_side2":["...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","....ggggggggggs...","....ggggggggggs...","....bbbbbbbbb.....","....bbbbbbbbb.....","....bbb...bbb.....","..h.ss.hhhh.ss.h..",".h.ss.hhhhh.ss.hh.",".hhh.ss.hhh.ss.h.."],"a_head_down2":["................","....WWWWWWWW....","...WWppnnppWW...","..WnnnnnnnnnnW..",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnssssssssnnW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...nnSSSSSSnn..."],"a_head_up":["................","....WWWWWWWW....","...WWppnnppWW...","..WnnnnnnnnnnW..",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnnnnnnnnnnnW.",".WnnssssssssnnW.",".WWpsdwsswdspWW.",".WWpsdwsswdspWW.",".WWpsrssssrspWW.",".WWpsssRRssspWW.","...nnSSSSSSnn..."],"a_body_side1":["...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","....ggggggggggs...","....ggggggggggs...","....bbbbbbbbb.....","....bbbbbbbbb.....","....bbb...bbb.....","..hh.ss.hh.ss.hh..",".hhh.ss.hhh.ss.hh.",".hhh.ss.hhh.ss.h.."],"a_body_side3":["...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","...gggggggggggg...","....ggggggggggs...","....ggggggggggs...","....bbbbbbbbb.....","....bbbbbbbbb.....","....bbb...bbb.....","..h.ss.hhhh.ss.h..",".h.ss.hhhhh.ss.hh.",".hhh.ss.hhh.ss.h.."],"a_body_up0":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hh.sss.hh.sss.hh","..sss....sss...."],"a_body_up1":["..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..gggggggggggg..","..wggggggggggw..","..ssggggggggss..","..ssggggggggss..","...bbbbbbbbbb...","...bbbbbbbbbb...",".h.bbb....bbb.h.","hhh.ss.hh.ss.hhh","..sss....sss...."]};
 
   const PAL = {
     h: [27, 27, 36],
@@ -24,6 +24,7 @@ window.Sprites = (function () {
   const flashCache = Object.create(null);
   const iconCache = Object.create(null);
   let shadow = null;
+  let light = null;
 
   function canvas(w, h) {
     const c = document.createElement('canvas');
@@ -192,6 +193,22 @@ window.Sprites = (function () {
     return c;
   }
 
+  // halo de luz del jugador (cálido, sutil, cacheado)
+  function lightEl() {
+    if (light) return light;
+    const c = canvas(160, 160);
+    const x = ctx2(c);
+    const g = x.createRadialGradient(80, 80, 4, 80, 80, 78);
+    g.addColorStop(0, 'rgba(255,236,170,.20)');
+    g.addColorStop(0.35, 'rgba(255,220,140,.10)');
+    g.addColorStop(0.7, 'rgba(180,140,255,.045)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 160, 160);
+    light = c;
+    return c;
+  }
+
   function paper(x, px, py, w, h, fill, border) {
     rect(x, px, py, w, h, border || '#0b0b12');
     rect(x, px + 1, py + 1, w - 2, h - 2, fill || '#f4f0ff');
@@ -300,31 +317,60 @@ window.Sprites = (function () {
     return c;
   }
 
-  function enemyManager() {
+  // El PICAO: chándal, gorra, cadenita y móvil en la mano.
+  function enemyPicao() {
     const c = canvas(22, 27);
     const x = ctx2(c);
-    rect(x, 6, 0, 10, 3, '#0b0b12');
-    rect(x, 7, 1, 8, 2, '#3a2b2b');
-    rect(x, 5, 3, 12, 9, '#0b0b12');
+    // gorra
+    rect(x, 6, 0, 10, 1, '#0b0b12');
+    rect(x, 6, 1, 10, 2, '#c43e3e');
+    rect(x, 8, 1, 6, 1, '#e8607a');
+    rect(x, 4, 3, 15, 1, '#0b0b12');
+    rect(x, 5, 4, 13, 1, '#8c1a2a');
+    // cabeza
+    rect(x, 5, 4, 12, 9, '#0b0b12');
     rect(x, 6, 4, 10, 8, '#f6cba4');
-    rect(x, 6, 7, 2, 1, '#22222b');
-    rect(x, 14, 7, 2, 1, '#22222b');
-    rect(x, 6, 6, 3, 1, '#5a3a1a');
-    rect(x, 13, 6, 3, 1, '#5a3a1a');
-    rect(x, 9, 11, 4, 1, '#c43e3e');
-    rect(x, 3, 12, 16, 12, '#0b0b12');
-    rect(x, 4, 13, 14, 10, '#241a3d');
-    rect(x, 10, 13, 2, 9, '#f4f0ff');
-    rect(x, 10, 13, 2, 2, '#c43e3e');
-    rect(x, 10, 15, 2, 5, '#c43e3e');
-    rect(x, 1, 14, 3, 7, '#0b0b12');
-    rect(x, 2, 15, 1, 5, '#f6cba4');
-    rect(x, 18, 14, 3, 7, '#0b0b12');
-    rect(x, 19, 15, 1, 5, '#f6cba4');
+    rect(x, 6, 5, 10, 1, '#5a3a1a');
+    // gafas de sol
+    rect(x, 7, 7, 3, 2, '#0b0b12');
+    rect(x, 12, 7, 3, 2, '#0b0b12');
+    rect(x, 7, 7, 1, 1, '#5ce1ff');
+    rect(x, 12, 7, 1, 1, '#5ce1ff');
+    rect(x, 10, 7, 2, 1, '#0b0b12');
+    // sonrisilla chulesca
+    rect(x, 9, 10, 5, 1, '#0b0b12');
+    rect(x, 10, 10, 3, 1, '#c43e3e');
+    // cadena de oro
+    rect(x, 7, 12, 8, 1, '#ffd24a');
+    rect(x, 10, 13, 2, 2, '#ffd24a');
+    // torso (chándal)
+    rect(x, 3, 13, 16, 2, '#0b0b12');
+    rect(x, 4, 14, 14, 9, '#0b0b12');
+    rect(x, 5, 14, 12, 8, '#3d2c6b');
+    rect(x, 5, 14, 12, 1, '#ffd24a');
+    rect(x, 10, 15, 2, 7, '#f4f0ff');
+    rect(x, 10, 16, 2, 1, '#c43e3e');
+    rect(x, 5, 16, 1, 6, '#8b5cf6');
+    rect(x, 16, 16, 1, 6, '#8b5cf6');
+    // brazos
+    rect(x, 0, 15, 4, 9, '#0b0b12');
+    rect(x, 1, 16, 2, 6, '#8b5cf6');
+    rect(x, 18, 15, 4, 9, '#0b0b12');
+    rect(x, 19, 16, 2, 6, '#8b5cf6');
+    // móvil en la mano
+    rect(x, 18, 12, 4, 7, '#0b0b12');
+    rect(x, 19, 13, 2, 4, '#5ce1ff');
+    rect(x, 19, 15, 2, 1, '#0b0b12');
+    // piernas
     rect(x, 4, 23, 6, 4, '#0b0b12');
     rect(x, 12, 23, 6, 4, '#0b0b12');
-    rect(x, 5, 24, 4, 2, '#3c3a55');
-    rect(x, 13, 24, 4, 2, '#3c3a55');
+    rect(x, 5, 24, 4, 2, '#2a2140');
+    rect(x, 13, 24, 4, 2, '#2a2140');
+    rect(x, 5, 24, 1, 2, '#8b5cf6');
+    rect(x, 16, 24, 1, 2, '#8b5cf6');
+    // zapas
+    rect(x, 4, 26, 5, 1, '#f4f0ff');
+    rect(x, 13, 26, 5, 1, '#f4f0ff');
     return c;
   }
 
@@ -841,7 +887,7 @@ window.Sprites = (function () {
       case 'email': return enemyEmail();
       case 'empresa': return enemyEmpresa();
       case 'practicas': return enemyPracticas();
-      case 'manager': return enemyManager();
+      case 'picao': return enemyPicao();
       case 'manifestante': return enemyManifestante();
       case 'burocracia': return enemyBurocracia();
       case 'oferta': return enemyOferta();
@@ -871,11 +917,80 @@ window.Sprites = (function () {
     }
   }
 
+  // Variantes "_fl" de la pasiva Flequillo. Se generan a partir de la
+  // cabeza base (abajo/arriba/lado, parpadeo, daño y ambos personajes)
+  // para que la pasiva se vea igual mire donde mire el jugador.
+  const fringeCache = Object.create(null);
+
+  function fringeHead(base) {
+    const key = 'fl:' + base;
+    if (fringeCache[key]) return fringeCache[key];
+    const src = get(base);
+    if (!src) return null;
+    const c = canvas(src.width, src.height);
+    const x = ctx2(c);
+    x.drawImage(src, 0, 0);
+
+    const dye = rgb(PAL.u);
+    const light = rgb(PAL.p);
+    const hair = rgb(PAL.h);
+    const put = (px, py, w, h, col) => {
+      if (py < 0 || py >= c.height) return;
+      if (px < 0) { w += px; px = 0; }
+      if (px + w > c.width) w = c.width - px;
+      if (w > 0) rect(x, px, py, w, h, col);
+    };
+    const side = /_side$/.test(base);
+    const up = /_up\d*$/.test(base);
+
+    if (side) {
+      // barrido sobre la frente y mechón sobre el ojo delantero
+      put(7, 3, 6, 1, dye);
+      put(8, 4, 6, 1, dye);
+      put(9, 5, 5, 1, dye);
+      put(9, 6, 4, 1, dye);
+      put(11, 7, 4, 1, hair);
+      put(11, 8, 4, 2, hair);
+      put(12, 10, 3, 1, hair);
+      put(7, 3, 2, 1, light);
+      put(8, 4, 2, 1, light);
+      put(11, 8, 1, 2, dye);
+    } else if (up) {
+      // mechón teñido en la nuca
+      put(7, 2, 3, 1, dye);
+      put(6, 3, 4, 1, dye);
+      put(5, 4, 4, 1, dye);
+      put(5, 5, 5, 2, dye);
+      put(6, 7, 5, 1, dye);
+      put(6, 8, 4, 1, dye);
+      put(7, 9, 3, 1, dye);
+      put(7, 2, 1, 1, light);
+      put(5, 4, 1, 2, light);
+      put(6, 7, 1, 1, light);
+    } else {
+      // flequillo lateral sobre la frente y ojo derecho tapado
+      put(4, 3, 6, 1, dye);
+      put(3, 4, 7, 1, dye);
+      put(4, 5, 8, 1, dye);
+      put(5, 6, 8, 1, dye);
+      put(9, 7, 4, 1, hair);
+      put(9, 8, 4, 2, hair);
+      put(10, 10, 2, 1, hair);
+      put(4, 3, 2, 1, light);
+      put(3, 4, 2, 1, light);
+      put(5, 5, 2, 1, light);
+      put(9, 8, 1, 2, dye);
+    }
+    fringeCache[key] = c;
+    return c;
+  }
+
   function get(name) {
     if (!name) return fallback('?');
     if (cache[name]) return cache[name];
     let c = null;
-    if (PLAYER_GRIDS[name]) c = gridSprite(PLAYER_GRIDS[name]);
+    if (name.length > 3 && name.slice(-3) === '_fl') c = fringeHead(name.slice(0, -3));
+    else if (PLAYER_GRIDS[name]) c = gridSprite(PLAYER_GRIDS[name]);
     else if (name.indexOf('ic_') === 0) c = iconSprite(name.slice(3));
     else {
       c = worldSprite(name);
@@ -919,6 +1034,7 @@ window.Sprites = (function () {
 
   function has(name) {
     if (!name) return false;
+    if (name.length > 3 && name.slice(-3) === '_fl') return has(name.slice(0, -3));
     return !!(PLAYER_GRIDS[name] || cache[name]);
   }
 
@@ -936,6 +1052,7 @@ window.Sprites = (function () {
     flash,
     iconData,
     shadowEl,
+    lightEl,
     hash2,
     tile,
     PAL

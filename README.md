@@ -59,14 +59,28 @@ npm install  # Si hay dependencias
 open index.html
 ```
 
+### Subir a OVH (hosting compartido con PHP)
+
+El juego es estático y funciona sin servidor, pero el **ranking online** necesita PHP:
+
+1. Sube el proyecto completo por FTP (incluye `api/`).
+2. Da permisos de escritura a `api/data/` (`chmod 755` o `775`).
+3. Abre la web: el ranking se detecta solo. Si el API falla, el juego sigue en modo local.
+
+Archivos que genera el ranking en tiempo de ejecución (no se suben al repo):
+`api/data/scores.php`, `api/data/rate.php` y `api/data/.lock`.
+
+El API limita el nombre a 16 caracteres, la duración a 16 minutos, las bajas a 20 000,
+y permite un envío cada 6 segundos por IP.
+
 ## 🎮 Controles
 
-- **WASD** - Movimiento del jugador
-- **Mouse** - Apuntar y atacar
-- **Espacio** - Saltar / Defender
-- **Click Izquierdo** - Atacar
-- **Tab** - Abrir menú
-- **R** - Reiniciar nivel
+- **WASD / flechas** - Moverte
+- **Ataque** - Automático (apuntas con el movimiento)
+- **1 / 2 / 3** - Elegir mejora al subir de nivel
+- **R / S** - Reroll / saltar en la pantalla de mejora
+- **M** - Silenciar sonido
+- **ESC** - Pausa
 
 ## 🤖 Configuración de IA (Opcional)
 

@@ -45,7 +45,7 @@
       </div>
 
       <div id="boss-hud" class="hidden">
-        <div id="boss-name">MANAGER TOXICO</div>
+        <div id="boss-name">EL PICAO</div>
         <div id="boss-track"><div id="boss-fill"></div></div>
       </div>
 
@@ -58,9 +58,17 @@
     <div id="subtitle" class="hidden"></div>
 
     <div id="menu" class="screen hidden">
+      <div class="menu-emotes" aria-hidden="true">
+        <img src="assets/emotes/peepoHappy.webp" alt="" class="emote e1">
+        <img src="assets/emotes/PartyParrot.webp" alt="" class="emote e2">
+        <img src="assets/emotes/EZ.webp" alt="" class="emote e3">
+        <img src="assets/emotes/peepoSad.webp" alt="" class="emote e4">
+        <img src="assets/emotes/Clap.webp" alt="" class="emote e5">
+        <img src="assets/emotes/AYAYA.webp" alt="" class="emote e6">
+      </div>
       <div class="panel menu-panel">
         <div class="logo">
-          <div class="logo-sub">SUBATHON &middot; EN VIVO</div>
+          <div class="logo-sub"><span class="live-dot"></span>SUBATHON &middot; EN VIVO</div>
           <h1>MARA<span>SURVIVOR</span></h1>
           <div class="tagline">SOBREVIVE AL DIRECTORIO</div>
           <div class="goal">15 minutos. Cero curr&iacute;culums enviados. Derrota a la burocracia.</div>
@@ -72,6 +80,7 @@
         <button id="btn-play" class="btn big">JUGAR<small>INICIAR DIRECTO</small></button>
         <div class="menu-secondary">
           <button id="btn-shop" class="btn">TIENDA</button>
+          <button id="btn-rank" class="btn">RANKING</button>
           <button id="btn-how" class="btn">C&Oacute;MO JUGAR</button>
           <button id="btn-char" class="btn">PERSONAJE: <b id="char-name">MISSPOLAROID</b></button>
         </div>
@@ -106,6 +115,26 @@
         <p class="kicker">Las compras se guardan entre partidas.</p>
         <div id="shop-list"></div>
         <button id="btn-shop-back" class="btn">VOLVER</button>
+      </div>
+    </div>
+
+    <div id="ranking" class="screen hidden">
+      <div class="panel wide">
+        <div class="shop-head">
+          <h2>RANKING</h2>
+          <div id="ranking-status">TOP 20</div>
+        </div>
+        <div class="rank-name-row">
+          <label for="ranking-name">TU NOMBRE</label>
+          <input id="ranking-name" maxlength="16" autocomplete="off" spellcheck="false" placeholder="VIEWER">
+          <button id="btn-save-name" class="btn small">GUARDAR</button>
+        </div>
+        <p class="kicker" id="ranking-hint">Se guarda en este navegador y se env&iacute;a al terminar cada run.</p>
+        <div id="ranking-list" class="rank-list"></div>
+        <div class="rank-actions">
+          <button id="btn-ranking-refresh" class="btn small">ACTUALIZAR</button>
+          <button id="btn-ranking-back" class="btn">VOLVER</button>
+        </div>
       </div>
     </div>
 
@@ -146,8 +175,10 @@
         <h2 class="dead">FIN DEL DIRECTO</h2>
         <div id="go-stats" class="stats"></div>
         <div id="go-bits">BITS TOTALES: 0</div>
-        <div class="result-actions">
+        <div id="go-rank-note" class="rank-note"></div>
+        <div class="result-actions three">
           <button id="btn-retry" class="btn">REINICIAR</button>
+          <button id="btn-go-rank" class="btn">RANKING</button>
           <button id="btn-go-menu" class="btn">MEN&Uacute;</button>
         </div>
       </div>
@@ -158,8 +189,10 @@
         <h2 class="win">&iexcl;DIRECTO FINALIZADO!</h2>
         <div id="vic-stats" class="stats"></div>
         <div id="vic-bits">BITS TOTALES: 0</div>
-        <div class="result-actions">
+        <div id="vic-rank-note" class="rank-note"></div>
+        <div class="result-actions three">
           <button id="btn-vic-retry" class="btn">REINICIAR</button>
+          <button id="btn-vic-rank" class="btn">RANKING</button>
           <button id="btn-vic-menu" class="btn">MEN&Uacute;</button>
         </div>
       </div>
@@ -172,6 +205,7 @@
   <script src="js/emotes.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/ranking.js"></script>
   <script src="js/upgrades.js"></script>
   <script src="js/weapons.js"></script>
   <script src="js/enemies.js"></script>
