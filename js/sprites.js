@@ -813,9 +813,9 @@ window.Sprites = (function () {
         rect(x, 2, 9, 12, 1, '#b57a3c');
         break;
       case 'flequillo':
-        rect(x, 3, 2, 10, 4, '#c9b6ee');
+        rect(x, 3, 2, 10, 4, '#d6303e');
         rect(x, 4, 4, 8, 9, '#f6cba4');
-        rect(x, 3, 3, 4, 5, '#c9b6ee');
+        rect(x, 3, 3, 4, 5, '#ff7a86');
         rect(x, 4, 7, 1, 1, '#22222b');
         rect(x, 9, 7, 1, 1, '#22222b');
         rect(x, 6, 10, 4, 1, '#c43e3e');
@@ -931,8 +931,9 @@ window.Sprites = (function () {
     const x = ctx2(c);
     x.drawImage(src, 0, 0);
 
-    const dye = rgb(PAL.u);
-    const light = rgb(PAL.p);
+    // flequillo teñido de rojo (el rasgo estilizado de la pasiva)
+    const dye = rgb([214, 48, 62]);
+    const light = rgb([255, 122, 134]);
     const hair = rgb(PAL.h);
     const put = (px, py, w, h, col) => {
       if (py < 0 || py >= c.height) return;

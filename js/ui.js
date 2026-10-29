@@ -81,6 +81,41 @@ window.UI = (function () {
   function hideAllScreens() { SCREENS.forEach(s => el[s].classList.add('hidden')); }
   function show(id) { hideAllScreens(); el[id].classList.remove('hidden'); }
 
+  // ---------------- TAMAÑO DEL HUD ----------------
+  const HUD_KEY = 'mara_survivor_hud_v1';
+  const HUD_MODES = ['compacto', 'normal', 'grande'];
+  const HUD_LABELS = { compacto: 'COMPACTO', normal: 'NORMAL', grande: 'GRANDE' };
+
+  function getHudMode() {
+    try {
+      const v = localStorage.getItem(HUD_KEY);
+      if (HUD_MODES.indexOf(v) !== -1) return v;
+    } catch (e) {}
+    return 'compacto';
+  }
+
+  function applyHudMode(mode) {
+    const m = HUD_MODES.indexOf(mode) !== -1 ? mode : 'compacto';
+    const stage = document.getElementById('stage');
+    if (stage) stage.setAttribute('data-hud', m);
+    const name = document.getElementById('hud-name');
+    if (name) name.textContent = HUD_LABELS[m];
+    return m;
+  }
+
+  function setHudMode(mode) {
+    const m = applyHudMode(mode);
+    try { localStorage.setItem(HUD_KEY, m); } catch (e) {}
+    return m;
+  }
+
+  function cycleHudMode() {
+    const i = HUD_MODES.indexOf(getHudMode());
+    return setHudMode(HUD_MODES[(i + 1) % HUD_MODES.length]);
+  }
+
+  applyHudMode(getHudMode());
+
   let announceTimer = null, subTimer = null;
   let lastKills = -1;
 
@@ -399,6 +434,7 @@ window.UI = (function () {
     show, hideAllScreens, hud, announce, subtitle,
     updateHUD, updateSlots, renderLevelUp, renderChest, renderPause,
     gameOver, victory, renderMenu, renderShop, on, rankNote,
+    getHudMode, setHudMode, cycleHudMode,
     updateBoss, lowHP, damageFlash, handleKey,
     el,
   };

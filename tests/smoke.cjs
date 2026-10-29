@@ -189,6 +189,15 @@ check('shop profundo dmg=2', UI.meta.shop.dmg === 2, UI.meta.shop.dmg);
 check('shop profundo hp=0', UI.meta.shop.hp === 0, UI.meta.shop.hp);
 check('sin NaN en meta', Object.values(UI.meta.shop).every((v) => isFinite(v)));
 
+// tamaño del HUD: compacto por defecto y ciclo persistente
+check('hud compacto por defecto', UI.getHudMode() === 'compacto', UI.getHudMode());
+check('atributo data-hud aplicado', document.getElementById('stage').getAttribute('data-hud') === 'compacto');
+UI.setHudMode('grande');
+check('hud grande aplicado', document.getElementById('stage').getAttribute('data-hud') === 'grande');
+check('hud guardado en local', localStorage.getItem('mara_survivor_hud_v1') === 'grande');
+check('hud cicla a compacto', UI.cycleHudMode() === 'compacto', UI.getHudMode());
+check('modo hud inválido cae en compacto', UI.setHudMode('gigante') === 'compacto', UI.getHudMode());
+
 console.log('\n2) sprites e iconos');
 const missing = [];
 for (const id in Upgrades.WEAPONS) {

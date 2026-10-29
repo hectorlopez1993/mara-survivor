@@ -188,6 +188,8 @@ async function main() {
   await sleep(1300);
   check('en partida', await evaluate('Game.state') === 'playing');
   check('HUD visible', await evaluate("!document.getElementById('hud').classList.contains('hidden')"));
+  check('HUD compacto por defecto', await evaluate("document.getElementById('stage').getAttribute('data-hud')") === 'compacto');
+  check('botón de tamaño de HUD', await evaluate("!!document.getElementById('btn-hud')"));
   const anim = await evaluate('({ t: Game.player.animT, blink: Game.player.blinkT, hurt: Game.player.hurtT })');
   check('animación idle activa', anim.t > 0 && typeof anim.blink === 'number' && anim.hurt === 0, JSON.stringify(anim));
   await shot('04-juego');

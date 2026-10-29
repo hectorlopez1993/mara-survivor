@@ -62,6 +62,7 @@
   });
   UI.on('btn-shop', () => UI.renderShop());
   UI.on('btn-how', () => UI.show('howto'));
+  UI.on('btn-hud', () => UI.cycleHudMode());
   UI.on('btn-how-back', () => UI.renderMenu());
   UI.on('btn-shop-back', () => UI.renderMenu());
 
