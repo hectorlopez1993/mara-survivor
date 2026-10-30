@@ -300,6 +300,21 @@ async function main() {
   await evaluate("Game.keyDown('Escape'); Game.keyUp('Escape')");
   await sleep(200);
   check('pausa', await evaluate('Game.state') === 'pause', await evaluate('Game.state'));
+  check('la pausa tiene botón de HUD', await evaluate("!!document.getElementById('btn-hud-pause')"));
+  const hudBefore = await evaluate("document.getElementById('stage').getAttribute('data-hud')");
+  await evaluate("document.getElementById('btn-hud-pause').click()");
+  await sleep(120);
+  const hudAfter = await evaluate("document.getElementById('stage').getAttribute('data-hud')");
+  check('el botón de pausa cambia el HUD', hudBefore === 'compacto' && hudAfter === 'normal',
+    hudBefore + ' -> ' + hudAfter);
+  check('la pausa muestra el modo nuevo',
+    await evaluate("document.getElementById('hud-name-pause').textContent") === 'NORMAL');
+  check('sigue en pausa tras cambiar el HUD', await evaluate('Game.state') === 'pause');
+  await evaluate("document.getElementById('btn-hud-pause').click()");
+  await sleep(120);
+  check('la pausa cicla otra vez', await evaluate("document.getElementById('stage').getAttribute('data-hud')") === 'grande');
+  await evaluate("document.getElementById('btn-hud-pause').click()");
+  await sleep(120);
   await shot('12-pausa');
 
   check('sprites nuevos del jugador', await evaluate(`(() => {

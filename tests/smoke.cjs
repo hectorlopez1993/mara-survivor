@@ -229,6 +229,13 @@ check('hud grande aplicado', document.getElementById('stage').getAttribute('data
 check('hud guardado en local', localStorage.getItem('mara_survivor_hud_v1') === 'grande');
 check('hud cicla a compacto', UI.cycleHudMode() === 'compacto', UI.getHudMode());
 check('modo hud inválido cae en compacto', UI.setHudMode('gigante') === 'compacto', UI.getHudMode());
+UI.setHudMode('normal');
+check('la etiqueta del menú sigue el modo', getEl('hud-name').textContent === 'NORMAL', getEl('hud-name').textContent);
+check('la etiqueta de la pausa sigue el modo', getEl('hud-name-pause').textContent === 'NORMAL', getEl('hud-name-pause').textContent);
+UI.cycleHudMode();
+check('ciclar desde la pausa cambia ambos textos', UI.getHudMode() === 'grande' &&
+  getEl('hud-name').textContent === 'GRANDE' && getEl('hud-name-pause').textContent === 'GRANDE');
+UI.setHudMode('compacto');
 
 console.log('\n2) sprites e iconos');
 const missing = [];

@@ -105,7 +105,7 @@ el distintivo `D#N` con el nivel de directo de cada marca; las marcas antiguas v
 - **1 / 2 / 3** - Elegir mejora al subir de nivel
 - **R / S** - Reroll / saltar en la pantalla de mejora
 - **M** - Silenciar sonido
-- **ESC** - Pausa
+- **ESC** - Pausa (ver build y cambiar el tamaño del HUD: compacto / normal / grande)
 
 ## 🤖 Configuración de IA (Opcional)
 

@@ -156,6 +156,8 @@ window.UI = (function () {
     if (stage) stage.setAttribute('data-hud', m);
     const name = document.getElementById('hud-name');
     if (name) name.textContent = HUD_LABELS[m];
+    const namePause = document.getElementById('hud-name-pause');
+    if (namePause) namePause.textContent = HUD_LABELS[m];
     return m;
   }
 
