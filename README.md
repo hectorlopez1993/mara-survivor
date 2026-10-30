@@ -25,6 +25,30 @@ Mara Survivor es un juego de aventura en tiempo real con arte pixel art, que com
 - ⚔️ **Combate en Tiempo Real** - Múltiples armas y mejoras progresivas
 - 🏆 **Progresión Infinita** - Niveles infinitos con dificultad escalable
 
+## 🎬 Directo infinito (progresión entre partidas)
+
+Cada victoria sube un **nivel de directo** que se guarda en el navegador y **nunca baja**.
+La siguiente partida es más dura: +25 % de vida enemiga, +4 % de velocidad, +6 % de daño
+y de frecuencia de aparición, y +15 % de Bits para compensar. Los topes de velocidad,
+daño y enemigos vivos evitan que un nivel alto congele el juego.
+
+- **Biomas en ciclo de 3**: Cabaña → Oficina → Plató → Cabaña… El nivel 0 siempre es la
+  cabaña de Mara (suelo de madera, alfombra y peluches tirados); la oficina y el plató
+  traen sus propios props (escritorio, cámara, trípode, foco).
+- **Enemigos nuevos por nivel**: el **Hater** (nivel 1) dispara dislikes, el **Reclutador**
+  (nivel 2) embiste, la **Influencer** (nivel 3) acelera a los enemigos cercanos.
+- **Jefa final nueva**: desde el nivel 2, la **Pelirroja** sustituye a la Burocracia como
+  jefa final (la Burocracia pasa al minuto 12). Es un homenaje/parodia a la streamer
+  **Zeling**: usa solo coletillas públicas de sus clips ("NO ME VAN A MATAR, SOY MUY BUENA
+  EN ESTO", "¿QUÉ COJONES ES ESTO?", "ESTO NO ES UN BAIT, ES CONTENIDO"). Sin polémicas.
+- **Armas desbloqueables en la tienda**: **Táper de mamá** (arco + comida que ralentiza),
+  **Vaso de alcohol** (charco que termina en llamas) y **Lanza de corazones** (estocada +
+  corazones teledirigidos).
+- **Alejandro** empieza con el Táper, siempre activo; ya no depende de que aparezca el
+  compañero. Si lleva el arma "Alejandro", quien aparece es Mara con flashes de cámara.
+- **Tienda con pestañas**: MEJORAS (13 filas, incluida la **Maldición del Chat**: más
+  dificultad a cambio de más Bits y XP) y ARSENAL (Alejandro + las tres armas nuevas).
+
 ## 🛠️ Tecnologías
 
 ### Frontend
@@ -71,7 +95,8 @@ Archivos que genera el ranking en tiempo de ejecución (no se suben al repo):
 `api/data/scores.php`, `api/data/rate.php` y `api/data/.lock`.
 
 El API limita el nombre a 16 caracteres, la duración a 16 minutos, las bajas a 20 000,
-y permite un envío cada 6 segundos por IP.
+el nivel de directo a 0–999, y permite un envío cada 6 segundos por IP. La tabla muestra
+el distintivo `D#N` con el nivel de directo de cada marca; las marcas antiguas valen `D#0`.
 
 ## 🎮 Controles
 

@@ -123,13 +123,13 @@ global.window.innerWidth = 1280;
 global.window.innerHeight = 720;
 
 // ---------------- cargar scripts reales ----------------
-const scripts = ['sprites', 'emotes', 'audio', 'ui', 'ranking', 'upgrades', 'weapons', 'enemies', 'player', 'game', 'main'];
+const scripts = ['sprites', 'biomes', 'emotes', 'audio', 'ui', 'ranking', 'upgrades', 'weapons', 'enemies', 'player', 'game', 'main'];
 for (const s of scripts) {
   const file = path.join(root, 'js', s + '.js');
   vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: file });
 }
 
-const { Game, UI, Sprites, Upgrades, Weapons, Enemies } = global;
+const { Game, UI, Sprites, Upgrades, Weapons, Enemies, Biomes } = global;
 const DT = 1 / 30;
 
 let failures = 0;
@@ -188,6 +188,38 @@ check('bits migrados', UI.meta.bits === 7, UI.meta.bits);
 check('shop profundo dmg=2', UI.meta.shop.dmg === 2, UI.meta.shop.dmg);
 check('shop profundo hp=0', UI.meta.shop.hp === 0, UI.meta.shop.hp);
 check('sin NaN en meta', Object.values(UI.meta.shop).every((v) => isFinite(v)));
+check('mejoras nuevas migradas a 0', ['armor', 'regen', 'area', 'cooldown', 'growth', 'greed', 'revive', 'curse']
+  .every((k) => UI.meta.shop[k] === 0));
+check('armas nuevas bloqueadas por defecto', UI.meta.unlocked.taper === false && UI.meta.unlocked.vaso === false && UI.meta.unlocked.lanza === false);
+
+// nivel de directo
+check('tier por defecto 0', UI.meta.tier === 0, UI.meta.tier);
+check('tier sube 1', UI.addTier() === 1);
+check('tier sube 2', UI.addTier() === 2);
+check('bestTier guarda el máximo', UI.meta.bestTier === 2, UI.meta.bestTier);
+check('tier persistido', JSON.parse(localStorage.getItem('mara_survivor_save_v1')).tier === 2);
+UI.meta.tier = 5;
+const TM5 = UI.tierMults();
+check('mults vida t=5', Math.abs(TM5.hp - 2.25) < 1e-9, TM5.hp);
+check('mults bits t=5', Math.abs(TM5.bits - 1.75) < 1e-9, TM5.bits);
+check('mults velocidad t=5', Math.abs(TM5.speed - 1.2) < 1e-9, TM5.speed);
+UI.meta.tier = 999;
+const TMX = UI.tierMults();
+check('mults con tier roto siguen finitos', Object.values(TMX).every((v) => isFinite(v)));
+check('topes de velocidad y vivos', TMX.speed <= 1.8 * 1.15 && TMX.maxAlive <= 320);
+UI.meta.tier = 0; UI.meta.bestTier = 0; UI.save();
+
+// revivir una sola vez
+UI.meta.shop.revive = 1;
+Game.reset();
+Game.player.invuln = 0;
+Game.hurtPlayer(9999);
+check('revive deja media vida', Game.player.hp === Math.floor(Game.player.stats.maxHP * 0.5), Game.player.hp);
+check('revive no termina la run', Game.state === 'playing', Game.state);
+Game.player.invuln = 0;
+Game.hurtPlayer(9999);
+check('segunda muerte sí termina', Game.state === 'gameover', Game.state);
+UI.meta.shop.revive = 0;
 
 // tamaño del HUD: compacto por defecto y ciclo persistente
 check('hud compacto por defecto', UI.getHudMode() === 'compacto', UI.getHudMode());
@@ -210,7 +242,8 @@ for (const id in Upgrades.PASSIVES) {
   if (!Sprites.iconData(d.icon)) missing.push('icon passive ' + id);
 }
 check('todos los iconos de armas/pasivas existen', missing.length === 0, missing.join(', '));
-const enemySprites = ['form', 'contrato', 'cv', 'email', 'empresa', 'practicas', 'picao', 'manifestante', 'burocracia'];
+const enemySprites = ['form', 'contrato', 'cv', 'email', 'empresa', 'practicas', 'picao', 'manifestante', 'burocracia',
+  'hater', 'reclutador', 'influencer', 'pelirroja', 'dislike', 'like'];
 check('sprites de enemigos completos', enemySprites.every((n) => !!Sprites.get(n)));
 const playerSprites = ['head_down', 'head_down2', 'head_down_hurt', 'head_up', 'head_side',
   'body_down0', 'body_down1', 'body_up0', 'body_up1', 'body_side0', 'body_side1', 'body_side2', 'body_side3'];
@@ -235,6 +268,58 @@ check('tipo picao definido', !!Enemies.TYPES.picao);
 check('manager ya no existe', !Enemies.TYPES.manager);
 check('el picao es boss', !!(Enemies.TYPES.picao && Enemies.TYPES.picao.boss));
 check('cliente de ranking cargado', !!global.Ranking && typeof global.Ranking.submit === 'function');
+const rankPayload = global.Ranking.buildPayload({ time: 100, kills: 5, level: 3, tier: 7 }, true);
+check('el ranking envía el nivel de directo', rankPayload.tier === 7, rankPayload.tier);
+check('tier inválido se acota en el ranking',
+  global.Ranking.buildPayload({ tier: 5000 }).tier === 999 &&
+  global.Ranking.buildPayload({ tier: -4 }).tier === 0);
+global.Ranking.render([{ name: 'OLD', time: 120, kills: 5, level: 2 }]);
+const rankTable = byId.get('ranking-list').children[0];
+const oldRow = rankTable && rankTable.children[1];
+check('las marcas antiguas se pintan como D#0',
+  !!oldRow && oldRow.children[1].children[0].textContent === 'D#0',
+  oldRow && oldRow.children[1].children[0].textContent);
+
+// enemigos del directo: se estrenan por nivel y el jefe final cambia
+check('tipos nuevos definidos', ['hater', 'reclutador', 'influencer', 'pelirroja'].every((n) => !!Enemies.TYPES[n]));
+check('boss final nivel 0-1', Enemies.bossFor(0) === 'burocracia' && Enemies.bossFor(1) === 'burocracia');
+check('boss final desde nivel 2', Enemies.bossFor(2) === 'pelirroja' && Enemies.bossFor(5) === 'pelirroja');
+check('minuto 1 nivel 0 sin hater', !('hater' in Enemies.waveComp(1, 0)));
+check('minuto 3 nivel 1 con hater', !!Enemies.waveComp(3, 1).hater);
+check('minuto 2 nivel 1 con hater', !!Enemies.waveComp(2, 1).hater);
+check('minuto 1 nivel 1 sin hater (aún no toca)', !Enemies.waveComp(1, 1).hater);
+check('minuto 3 nivel 2 con reclutador', !!Enemies.waveComp(3, 2).reclutador);
+check('minuto 4 nivel 2 sin influencer', !Enemies.waveComp(4, 2).influencer);
+check('minuto 4 nivel 3 con influencer', !!Enemies.waveComp(4, 3).influencer);
+check('la pelirroja no sale en oleadas', !('pelirroja' in Enemies.waveComp(14, 9)));
+
+// biomas: ciclo cabaña -> oficina -> plató
+check('bioma por defecto es la cabaña', Biomes.forTier(0).id === 'cabin', Biomes.forTier(0).id);
+check('tier 1 es oficina', Biomes.forTier(1).id === 'office', Biomes.forTier(1).id);
+check('tier 2 es plató', Biomes.forTier(2).id === 'set', Biomes.forTier(2).id);
+check('tier 3 vuelve a la cabaña', Biomes.forTier(3).id === 'cabin', Biomes.forTier(3).id);
+check('tier roto cae en cabaña', Biomes.forTier(-5).id === 'cabin' && Biomes.forTier('x').id === 'cabin');
+check('bioma por id', Biomes.byId('office').id === 'office' && Biomes.byId('nope').id === 'cabin');
+check('cada bioma tiene al menos 3 obstáculos', Biomes.LIST.every((b) => b.obs.length >= 3),
+  Biomes.LIST.map((b) => b.id + ':' + b.obs.length).join(' '));
+check('cada bioma tiene al menos 3 decorados', Biomes.LIST.every((b) => b.deco.length >= 3),
+  Biomes.LIST.map((b) => b.id + ':' + b.deco.length).join(' '));
+const biomeSprites = [];
+for (const b of Biomes.LIST) {
+  for (const n of b.obs.concat(b.deco)) if (!Sprites.get(n)) biomeSprites.push(b.id + '/' + n);
+}
+check('todos los props de bioma tienen sprite', biomeSprites.length === 0, biomeSprites.join(', '));
+check('la cabaña tiene peluches', Biomes.byId('cabin').deco.filter((n) => n.startsWith('peluche_')).length >= 4);
+check('suelos distinguibles', Sprites.tile(0, 0, 'cabin') !== Sprites.tile(0, 0, 'office') &&
+  Sprites.tile(0, 0, 'office') !== Sprites.tile(0, 0, 'set'));
+check('alfombra solo en cabaña', Biomes.byId('cabin').rug > 0 &&
+  Biomes.byId('office').rug === 0 && Biomes.byId('set').rug === 0);
+UI.meta.tier = 2;
+Game.reset();
+check('reset fija el bioma del tier', Game.biome && Game.biome.id === 'set', Game.biome && Game.biome.id);
+UI.meta.tier = 0; UI.save();
+Game.reset();
+check('tier 0 juega en la cabaña', Game.biome.id === 'cabin', Game.biome.id);
 
 console.log('\n3) reset y HUD');
 Game.reset();
@@ -266,6 +351,143 @@ if (obs) {
   step(1);
   check('obstáculo destruido fuera de la lista', Game.obstacles.length === before - 1);
 }
+
+console.log('\n4b) enemigos del directo');
+Game.reset();
+Game.time = 60;
+const px = Game.player.x, py = Game.player.y;
+const haterE = Enemies.create(Game, 'hater', px + 110, py);
+haterE.shootT = 0;
+step(2);
+const dislikeShot = Enemies.eproj().some((p) => p.kind === 'dislike');
+check('el hater dispara dislikes', dislikeShot);
+const recl = Enemies.create(Game, 'reclutador', px + 150, py);
+recl.chargeT = 0;
+step(2);
+check('el reclutador embiste', recl.dashT > 0, recl.dashT);
+const inf = Enemies.create(Game, 'influencer', px + 40, py);
+const pr0 = inf.x;
+step(12);
+check('la influencer huye al acercarte', inf.x > pr0, (inf.x - pr0).toFixed(2));
+const friend = Enemies.create(Game, 'form', inf.x + 20, inf.y);
+step(1);
+check('la influencer acelera a los suyos', friend.haste > 0, friend.haste);
+
+// la pelirroja cierra el directo y suelta sus frases
+UI.meta.tier = 2;
+Game.reset();
+Game.time = 14 * 60 + 58;
+const pel = Enemies.create(Game, 'pelirroja', px + 200, py);
+pel.final = true;
+pel.atkT = 0;
+step(30);
+check('la pelirroja ataca con likes', Enemies.eproj().some((p) => p.kind === 'like'));
+Game.damageEnemy(pel, 1e9);
+check('matar a la pelirroja da la victoria', Game.victoryDelay > 0 || Game.ended, Game.victoryDelay);
+
+// la burocracia del minuto 12 (nivel 2+) no cierra el directo
+Game.reset();
+Game.time = 12 * 60;
+const midBur = Enemies.create(Game, 'burocracia', px + 100, py);
+Game.damageEnemy(midBur, 1e9);
+check('la burocracia de mitad no da la victoria', !Game.victoryDelay && !Game.ended, Game.victoryDelay);
+UI.meta.tier = 0; UI.save();
+
+console.log('\n4c) armas nuevas y Alejandro');
+check('táper evoluciona con comida', Upgrades.WEAPONS.taper.evo === 'comida');
+check('vaso evoluciona con hielo', Upgrades.WEAPONS.vaso.evo === 'hielo');
+check('lanza evoluciona con corazón', Upgrades.WEAPONS.lanza.evo === 'corazon');
+check('las tres armas tienen desbloqueo', Upgrades.WEAPONS.taper.unlock === 'taper' &&
+  Upgrades.WEAPONS.vaso.unlock === 'vaso' && Upgrades.WEAPONS.lanza.unlock === 'lanza');
+
+UI.meta.char = 'alex'; UI.meta.alex = true;
+Game.reset();
+check('Alejandro empieza con táper', Game.weapons[0] && Game.weapons[0].id === 'taper', Game.weapons[0] && Game.weapons[0].id);
+UI.meta.char = 'miso';
+Game.reset();
+check('MissPolaroid sigue con polaroid', Game.weapons[0] && Game.weapons[0].id === 'polaroid');
+
+UI.meta.unlocked = { taper: false, vaso: false, lanza: false };
+Game.reset();
+let lockedSeen = new Set();
+for (let i = 0; i < 200; i++) {
+  for (const o of Upgrades.pick3(Game.banished)) if (o.pick.kind === 'wnew') lockedSeen.add(o.pick.id);
+}
+check('armas bloqueadas no salen en subidas', !lockedSeen.has('taper') && !lockedSeen.has('vaso') && !lockedSeen.has('lanza'), [...lockedSeen].join(','));
+UI.meta.unlocked.taper = true;
+let taperSeen = false;
+for (let i = 0; i < 200 && !taperSeen; i++) {
+  for (const o of Upgrades.pick3(Game.banished)) if (o.pick.kind === 'wnew' && o.pick.id === 'taper') taperSeen = true;
+}
+check('el táper desbloqueado sí sale en subidas', taperSeen);
+UI.meta.unlocked = { taper: false, vaso: false, lanza: false };
+
+// el táper vuela en arco y deja comida
+Game.reset();
+Weapons.grant('taper');
+let tap = Game.weapons.find((w) => w.id === 'taper');
+Game.player.x = 0; Game.player.y = 0;
+tap.t = 0;
+step(1);
+check('el táper lanza un proyectil en arco', Weapons.projectiles.some((p) => p.kind === 'taper' && p.arc === true));
+step(40, { topup: true });
+check('el táper deja comida al caer', Weapons.zones.some((z) => z.kind === 'comida'));
+
+// el vaso prende fuego
+Game.reset();
+Weapons.grant('vaso');
+let vas = Game.weapons.find((w) => w.id === 'vaso');
+vas.t = 0;
+step(1);
+check('el vaso se lanza', Weapons.projectiles.some((p) => p.kind === 'vaso'));
+step(70, { topup: true });
+check('el vaso arde al rato', Weapons.zones.some((z) => z.kind === 'fuego'));
+
+// la lanza dispara corazones
+Game.reset();
+Weapons.grant('lanza');
+let lan = Game.weapons.find((w) => w.id === 'lanza');
+lan.t = 0;
+step(1);
+check('la lanza dispara corazones', Weapons.projectiles.some((p) => p.kind === 'heart' && p.homing >= 5));
+
+console.log('\n4d) tienda ampliada');
+UI.meta.shop.armor = 2; UI.meta.shop.regen = 3; UI.meta.shop.area = 3;
+UI.meta.shop.cooldown = 3; UI.meta.shop.growth = 3; UI.meta.shop.greed = 3;
+Game.reset(); Upgrades.recompute();
+const SS = Game.player.stats;
+check('la armadura de tienda se aplica', SS.armor === 2, SS.armor);
+check('la regeneración de tienda se aplica', Math.abs(SS.regen - 0.45) < 1e-9, SS.regen);
+check('el área de tienda se aplica', Math.abs(SS.area - 1.15) < 1e-9, SS.area);
+check('el cooldown de tienda se aplica', Math.abs(SS.cooldown - 0.91) < 1e-9, SS.cooldown);
+check('el crecimiento de XP se aplica', Math.abs(SS.xpMul - 1.18) < 1e-9, SS.xpMul);
+const greedMul = UI.tierMults().bits * (1 + 0.10 * 3);
+check('la codicia multiplica los bits', Math.abs(greedMul - 1.3) < 1e-9, greedMul);
+UI.meta.shop.armor = 0; UI.meta.shop.regen = 0; UI.meta.shop.area = 0;
+UI.meta.shop.cooldown = 0; UI.meta.shop.growth = 0; UI.meta.shop.greed = 0;
+
+UI.renderShop('mejoras');
+check('pestaña mejoras lista sus filas', UI.el.shopList.children.length === 13, UI.el.shopList.children.length);
+UI.renderShop('arsenal');
+check('pestaña arsenal lista sus filas', UI.el.shopList.children.length === 4, UI.el.shopList.children.length);
+check('la pestaña activa se marca', document.getElementById('shop-tab-arsenal').classList.contains('on') &&
+  !document.getElementById('shop-tab-mejoras').classList.contains('on'));
+
+UI.meta.bits = 500;
+UI.meta.unlocked.taper = false;
+UI.renderShop('arsenal');
+const taperRow = UI.el.shopList.children.find((r) => r.innerHTML.includes('TÁPER'));
+check('la fila del táper existe', !!taperRow);
+if (taperRow) {
+  const buy = taperRow.children[0];
+  check('el táper cuesta 400', buy.textContent === '400 BITS', buy.textContent);
+  buy.click();
+  check('comprar el táper lo desbloquea', UI.meta.unlocked.taper === true);
+  check('comprar el táper cobra 400', UI.meta.bits === 100, UI.meta.bits);
+}
+UI.meta.bits = 0;
+UI.meta.unlocked = { taper: false, vaso: false, lanza: false };
+UI.renderShop('mejoras');
 
 console.log('\n5) armas: niveles de Sub y explosión evolucionada');
 Game.reset();
@@ -330,7 +552,7 @@ for (let i = 0; i < 15 * 60 * 30; i++) {
 }
 check('sigue vivo a los 15:00', Game.state === 'playing' || Game.state === 'victory', Game.state);
 check('sin NaN en entidades', seenBraces() === 0, seenBraces());
-check('enemigos acotados', maxEnemies <= 231, maxEnemies);
+check('enemigos acotados', maxEnemies <= 240, maxEnemies); // oleadas a 230 + jefes/élites
 check('bajas registradas', Game.kills > 100, Game.kills);
 check('nivel alcanzado', Game.player.level > 5, Game.player.level);
 check('armas y pasivas elegidas', Game.weapons.length >= 2 && Object.keys(Game.passives).length >= 2,

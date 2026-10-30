@@ -169,12 +169,19 @@ async function main() {
   await sleep(250);
   check('tienda visible', await evaluate("!document.getElementById('shop').classList.contains('hidden')"));
   const shopFit = await evaluate(`(() => {
-    const l = document.getElementById('shop-list').getBoundingClientRect();
+    const p = document.querySelector('#shop .panel').getBoundingClientRect();
     const items = [...document.querySelectorAll('#shop-list .shop-item')];
-    return { n: items.length, allVisible: items.every((it) => it.getBoundingClientRect().bottom <= l.bottom + 0.5) };
+    return { n: items.length, inside: p.bottom <= 720 && p.right <= 1280 };
   })()`);
-  check('6 filas de tienda visibles', shopFit.n === 6 && shopFit.allVisible, JSON.stringify(shopFit));
+  check('13 filas de mejoras dentro del panel', shopFit.n === 13 && shopFit.inside, JSON.stringify(shopFit));
+  await evaluate("document.getElementById('shop-tab-arsenal').click()");
+  await sleep(150);
+  const arsenal = await evaluate("document.querySelectorAll('#shop-list .shop-item').length");
+  check('arsenal con 4 filas', arsenal === 4, arsenal);
+  check('pestaña arsenal activa', await evaluate("document.getElementById('shop-tab-arsenal').classList.contains('on')"));
   await shot('02-shop');
+  await evaluate("document.getElementById('shop-tab-mejoras').click()");
+  await sleep(120);
   await evaluate("document.getElementById('btn-shop-back').click()");
   await sleep(150);
   await evaluate("document.getElementById('btn-how').click()");
@@ -190,6 +197,9 @@ async function main() {
   check('HUD visible', await evaluate("!document.getElementById('hud').classList.contains('hidden')"));
   check('HUD compacto por defecto', await evaluate("document.getElementById('stage').getAttribute('data-hud')") === 'compacto');
   check('botón de tamaño de HUD', await evaluate("!!document.getElementById('btn-hud')"));
+  check('la primera partida es en la cabaña', await evaluate('Game.biome && Game.biome.id') === 'cabin');
+  check('suelos de los tres biomas existen', await evaluate(
+    "['cabin','office','set'].every((b) => !!Sprites.tile(0, 0, b)) && !!Sprites.get('peluche_oso')"));
   const anim = await evaluate('({ t: Game.player.animT, blink: Game.player.blinkT, hurt: Game.player.hurtT })');
   check('animación idle activa', anim.t > 0 && typeof anim.blink === 'number' && anim.hurt === 0, JSON.stringify(anim));
   await shot('04-juego');

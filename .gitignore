@@ -60,6 +60,7 @@ README_IA.md
 research/*.md
 assets/sprites_catalog.md
 .opencode/
+docs/
 
 # Keep the public README and license
 !README.md

@@ -8,13 +8,23 @@ window.UI = (function () {
   const META_DEFAULT = {
     bits: 0,
     char: 'miso',
-    shop: { dmg: 0, hp: 0, magnet: 0, reroll: 0, luck: 0 },
+    shop: {
+      dmg: 0, hp: 0, magnet: 0, reroll: 0, luck: 0,
+      armor: 0, regen: 0, area: 0, cooldown: 0, growth: 0, greed: 0, revive: 0, curse: 0,
+    },
+    unlocked: { taper: false, vaso: false, lanza: false },
     alex: false,
+    tier: 0,
+    bestTier: 0,
     bestTime: 0,
     totalRuns: 0,
     wins: 0,
   };
-  const SHOP_MAX = { dmg: 5, hp: 5, magnet: 3, reroll: 3, luck: 4 };
+  const SHOP_MAX = {
+    dmg: 5, hp: 5, magnet: 3, reroll: 3, luck: 4,
+    armor: 2, regen: 3, area: 3, cooldown: 3, growth: 3, greed: 3, revive: 1, curse: 5,
+  };
+  const TIER_MAX = 99;
   let meta = load();
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -33,8 +43,12 @@ window.UI = (function () {
     out.bestTime = (typeof saved.bestTime === 'number' && isFinite(saved.bestTime) && saved.bestTime > 0) ? saved.bestTime : 0;
     out.totalRuns = toInt(saved.totalRuns, 0, 1e9, 0);
     out.wins = toInt(saved.wins, 0, 1e9, 0);
+    out.tier = toInt(saved.tier, 0, TIER_MAX, 0);
+    out.bestTier = Math.max(out.tier, toInt(saved.bestTier, 0, TIER_MAX, 0));
     const shop = saved.shop && typeof saved.shop === 'object' ? saved.shop : {};
     for (const k in META_DEFAULT.shop) out.shop[k] = toInt(shop[k], 0, SHOP_MAX[k], 0);
+    const un = saved.unlocked && typeof saved.unlocked === 'object' ? saved.unlocked : {};
+    for (const k in META_DEFAULT.unlocked) out.unlocked[k] = un[k] === true;
     return out;
   }
 
@@ -54,6 +68,48 @@ window.UI = (function () {
     save();
   }
 
+  // ---------------- NIVEL DE DIRECTO ----------------
+  const TIER_BIOMES = ['CABAÑA', 'OFICINA', 'PLATÓ'];
+
+  function tierIndex() {
+    return Math.max(0, Math.min(TIER_MAX, meta.tier | 0));
+  }
+
+  function biomeIndex(tier) {
+    const t = tier === undefined ? tierIndex() : Math.max(0, Math.min(TIER_MAX, tier | 0));
+    return t % 3;
+  }
+
+  function biomeName(tier) {
+    const t = tier === undefined ? tierIndex() : tier;
+    if (window.Biomes) return window.Biomes.forTier(t).name;
+    return TIER_BIOMES[biomeIndex(t)];
+  }
+
+  // Multiplicadores entre partidas. Los topes evitan que un guardado roto
+  // (o un nivel absurdo) congele el juego.
+  function tierMults() {
+    const t = tierIndex();
+    const curse = Math.max(0, Math.min(5, meta.shop.curse | 0));
+    return {
+      hp: (1 + 0.25 * t) * (1 + 0.08 * curse),
+      speed: Math.min(1.8, 1 + 0.04 * t) * (1 + 0.03 * curse),
+      dmg: Math.min(3, 1 + 0.06 * t),
+      spawn: (1 + 0.06 * t) * (1 + 0.08 * curse),
+      count: 0.7 * t,
+      bits: (1 + 0.15 * t) * (1 + 0.12 * curse),
+      xp: (1 + 0.05 * t) * (1 + 0.05 * curse),
+      maxAlive: Math.min(320, 230 + 10 * t),
+    };
+  }
+
+  function addTier() {
+    meta.tier = Math.min(TIER_MAX, tierIndex() + 1);
+    meta.bestTier = Math.max(meta.bestTier || 0, meta.tier);
+    save();
+    return meta.tier;
+  }
+
   // ---------------- ELEMENTOS ----------------
   const $ = (id) => document.getElementById(id);
   const el = {
@@ -61,7 +117,7 @@ window.UI = (function () {
     ranking: $('ranking'),
     levelup: $('levelup'), chest: $('chest'), pause: $('pause'),
     gameover: $('gameover'), victory: $('victory'),
-    hpFill: $('hp-fill'), hpText: $('hp-text'), clock: $('clock'),
+    hpFill: $('hp-fill'), hpText: $('hp-text'), clock: $('clock'), goal: $('goal'),
     xpFill: $('xp-fill'), lvlText: $('lvl-text'), kills: $('kill-counter'),
     slots: $('weapon-slots'), rerollHud: $('reroll-hud'),
     announce: $('announce'), subtitle: $('subtitle'),
@@ -329,8 +385,10 @@ window.UI = (function () {
 
   function statsHTML(stats) {
     const m = Math.floor(stats.time / 60), s = Math.floor(stats.time % 60);
+    const tier = stats.tier === undefined ? meta.tier : stats.tier;
     return [
       ['Tiempo en directo', String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')],
+      ['Nivel de directo', '#' + tier + ' · ' + biomeName(tier)],
       ['Bajas', stats.kills],
       ['Nivel alcanzado', stats.level],
       ['Bits ganados', '+' + stats.bits],
@@ -349,8 +407,21 @@ window.UI = (function () {
     show('gameover');
   }
 
+  const TIER_TEASERS = {
+    1: 'NUEVO ENEMIGO: EL HATER · ya no solo insulta en el chat.',
+    2: 'NUEVO ENEMIGO: EL RECLUTADOR · y la jefa final cambia: llega LA PELIRROJA.',
+    3: 'NUEVO ENEMIGO: LA INFLUENCER · acelera a todo el que tiene cerca.',
+  };
+
+  function tierTeaser(tier) {
+    const txt = TIER_TEASERS[tier];
+    return txt ? '<p class="kicker tier-teaser">' + txt + '</p>' : '';
+  }
+
   function victory(stats, retryCb, menuCb, flavor) {
-    el.vicStats.innerHTML = (flavor ? '<p class="flavor">' + flavor + '</p>' : '') + statsHTML(stats);
+    el.vicStats.innerHTML = (flavor ? '<p class="flavor">' + flavor + '</p>' : '') +
+      '<p class="flavor">DIRECTO #' + meta.tier + ' SUPERADO · SIGUIENTE: ' +
+      biomeName(meta.tier) + '</p>' + tierTeaser(meta.tier) + statsHTML(stats);
     el.vicBits.textContent = 'BITS TOTALES: ' + meta.bits;
     const note = $('vic-rank-note'); if (note) note.textContent = '';
     const rankBtn = $('btn-vic-rank');
@@ -370,12 +441,15 @@ window.UI = (function () {
     el.menuBits.textContent = 'BITS: ' + meta.bits;
     const ms = document.getElementById('menu-stats');
     if (ms) {
-      ms.textContent = meta.totalRuns
+      const tier = tierIndex();
+      ms.textContent = (meta.totalRuns
         ? 'MEJOR ' + fmtTime(meta.bestTime) + '  ·  ' + meta.totalRuns + ' RUN' + (meta.totalRuns === 1 ? '' : 'S') +
           '  ·  ' + meta.wins + ' VICTORIA' + (meta.wins === 1 ? '' : 'S')
-        : 'PRIMERA RUN: aguanta los 15:00 y no mandes nada.';
+        : 'PRIMERA RUN: aguanta los 15:00 y no mandes nada.') +
+        '  ·  DIRECTO #' + tier + ' (' + biomeName(tier) + ')';
     }
     el.charName.textContent = meta.char === 'miso' ? 'MISSPOLAROID' : 'ALEJANDRO';
+    if (el.goal) el.goal.textContent = 'DIRECTO #' + tierIndex() + ' · ' + biomeName(tierIndex()) + ' · 15:00';
     $('btn-char').disabled = !meta.alex;
     $('btn-char').style.opacity = meta.alex ? 1 : 0.5;
     show('menu');
@@ -383,27 +457,55 @@ window.UI = (function () {
 
   // ---------------- TIENDA ----------------
   const SHOP_ITEMS = [
-    { id: 'dmg', name: 'MICRÓFONO PROFESIONAL', desc: '+6% de daño por nivel', costs: [60, 120, 240, 480, 960], max: 5 },
-    { id: 'hp', name: 'SILLA ERGONÓMICA', desc: '+12 de vida máxima por nivel', costs: [60, 120, 240, 480, 960], max: 5 },
-    { id: 'magnet', name: 'IMÁN DE SEGUIDORES', desc: '+25% de recogida polaroids', costs: [80, 160, 320], max: 3 },
-    { id: 'reroll', name: 'DADO DE SUSCRIPTOR', desc: '+1 reroll al empezar cada run', costs: [100, 200, 400], max: 3 },
-    { id: 'luck', name: 'TREBOL DE STREAM', desc: '+8% suerte: más gemas y Bits', costs: [100, 200, 400, 800], max: 4 },
-    { id: 'alex', name: 'DESBLOQUEAR: ALEJANDRO', desc: 'Hermano con comida como arma inicial', costs: [300], max: 1, special: 'alex' },
+    // pestaña MEJORAS
+    { id: 'dmg', tab: 'mejoras', name: 'MICRÓFONO PROFESIONAL', desc: '+6% de daño por nivel', costs: [60, 120, 240, 480, 960], max: 5 },
+    { id: 'hp', tab: 'mejoras', name: 'SILLA ERGONÓMICA', desc: '+12 de vida máxima por nivel', costs: [60, 120, 240, 480, 960], max: 5 },
+    { id: 'magnet', tab: 'mejoras', name: 'IMÁN DE SEGUIDORES', desc: '+25% de recogida de polaroids', costs: [80, 160, 320], max: 3 },
+    { id: 'reroll', tab: 'mejoras', name: 'DADO DE SUSCRIPTOR', desc: '+1 reroll al empezar cada run', costs: [100, 200, 400], max: 3 },
+    { id: 'luck', tab: 'mejoras', name: 'TRÉBOL DE STREAM', desc: '+8% suerte: más gemas y Bits', costs: [100, 200, 400, 800], max: 4 },
+    { id: 'armor', tab: 'mejoras', name: 'ARMADURA DE STREAMER', desc: '+1 de armadura por nivel (menos daño recibido)', costs: [250, 600], max: 2 },
+    { id: 'regen', tab: 'mejoras', name: 'BOCADILLO PERPETUO', desc: '+0,15 de vida por segundo', costs: [200, 400, 800], max: 3 },
+    { id: 'area', tab: 'mejoras', name: 'CÁMARA GRAN ANGULAR', desc: '+5% de área en armas y charcos', costs: [150, 300, 600], max: 3 },
+    { id: 'cooldown', tab: 'mejoras', name: 'CAFÉ DE MADRUGADA', desc: '−3% de cooldown (atacas más rápido)', costs: [200, 450, 900], max: 3 },
+    { id: 'growth', tab: 'mejoras', name: 'GUION DE CONTENIDO', desc: '+6% de XP ganada', costs: [150, 300, 600], max: 3 },
+    { id: 'greed', tab: 'mejoras', name: 'MONEDA DE SUPERCHAT', desc: '+10% de Bits ganados', costs: [120, 240, 480], max: 3 },
+    { id: 'revive', tab: 'mejoras', name: 'SEGUNDA TOMA', desc: 'Revives una vez al 50% de vida', costs: [2500], max: 1 },
+    { id: 'curse', tab: 'mejoras', name: 'MALDICIÓN DEL CHAT', desc: '+8% dificultad, +12% Bits y +5% XP por nivel', costs: [150, 300, 600, 1200, 2400], max: 5 },
+    // pestaña ARSENAL
+    { id: 'alex', tab: 'arsenal', name: 'DESBLOQUEAR: ALEJANDRO', desc: 'Empieza con Táper de mamá, siempre activo', costs: [300], max: 1, special: 'alex' },
+    { key: 'taper', tab: 'arsenal', name: 'TÁPER DE MAMÁ', desc: 'Se lanza en arco y deja comida que ralentiza', costs: [400], max: 1, special: 'unlock' },
+    { key: 'vaso', tab: 'arsenal', name: 'VASO DE ALCOHOL', desc: 'Charco que termina PRENDIENDO FUEGO', costs: [500], max: 1, special: 'unlock' },
+    { key: 'lanza', tab: 'arsenal', name: 'LANZA DE CORAZONES', desc: 'Estocada que dispara corazones teledirigidos', costs: [700], max: 1, special: 'unlock' },
   ];
 
-  function renderShop() {
+  let shopTab = 'mejoras';
+
+  function renderShop(tab) {
+    if (tab === 'mejoras' || tab === 'arsenal') shopTab = tab;
     el.shopBits.textContent = '— BITS: ' + meta.bits;
+    const tm = document.getElementById('shop-tab-mejoras');
+    const ta = document.getElementById('shop-tab-arsenal');
+    if (tm && ta) {
+      tm.classList.toggle('on', shopTab === 'mejoras');
+      ta.classList.toggle('on', shopTab === 'arsenal');
+      tm.onclick = () => { AudioFX.click(); renderShop('mejoras'); };
+      ta.onclick = () => { AudioFX.click(); renderShop('arsenal'); };
+    }
     el.shopList.innerHTML = '';
-    SHOP_ITEMS.forEach(it => {
+    SHOP_ITEMS.filter((it) => it.tab === shopTab).forEach(it => {
       const isAlex = it.special === 'alex';
-      const raw = isAlex ? (meta.alex ? 1 : 0) : (meta.shop[it.id] | 0);
+      const isUnlock = it.special === 'unlock';
+      const raw = isAlex ? (meta.alex ? 1 : 0)
+        : isUnlock ? (meta.unlocked[it.key] ? 1 : 0)
+          : (meta.shop[it.id] | 0);
       const lvl = Math.max(0, Math.min(it.max, raw));
       const maxed = lvl >= it.max;
       const cost = maxed ? 0 : it.costs[lvl];
       const row = document.createElement('div');
       row.className = 'shop-item';
-      const pips = (isAlex ? (meta.alex ? '★ DESBLOQUEADO' : '') :
-        '◆'.repeat(lvl) + '◇'.repeat(it.max - lvl));
+      const pips = (isAlex || isUnlock)
+        ? (maxed ? '★ DESBLOQUEADO' : '◇ BLOQUEADO')
+        : '◆'.repeat(lvl) + '◇'.repeat(it.max - lvl);
       row.innerHTML =
         '<div class="info"><b>' + it.name + '</b><div class="pips">' + pips + '</div><p>' + it.desc + '</p></div>';
       const btn = document.createElement('button');
@@ -414,7 +516,9 @@ window.UI = (function () {
         btn.onclick = () => {
           if (meta.bits < cost) return;
           meta.bits -= cost;
-          if (isAlex) meta.alex = true; else meta.shop[it.id]++;
+          if (isAlex) meta.alex = true;
+          else if (isUnlock) meta.unlocked[it.key] = true;
+          else meta.shop[it.id]++;
           save(); AudioFX.chest(); renderShop();
         };
       }
@@ -435,6 +539,7 @@ window.UI = (function () {
     updateHUD, updateSlots, renderLevelUp, renderChest, renderPause,
     gameOver, victory, renderMenu, renderShop, on, rankNote,
     getHudMode, setHudMode, cycleHudMode,
+    tierIndex, tierMults, addTier, biomeIndex, biomeName,
     updateBoss, lowHP, damageFlash, handleKey,
     el,
   };

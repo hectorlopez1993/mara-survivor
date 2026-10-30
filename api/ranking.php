@@ -28,6 +28,7 @@ const MAX_NAME_LEN = 16;
 const MAX_TIME     = 960.0;   // la partida termina a los 15:00 (+1,4s de margen de victoria)
 const MAX_KILLS    = 20000;
 const MAX_LEVEL    = 200;
+const MAX_TIER     = 999;
 const MIN_INTERVAL = 6;       // segundos entre envíos por IP
 const RATE_TTL     = 3600;
 const TOP_DEFAULT  = 20;
@@ -172,6 +173,7 @@ $name  = clean_name($in['name'] ?? '');
 $time  = isset($in['time']) ? (float) $in['time'] : -1.0;
 $kills = isset($in['kills']) ? (int) $in['kills'] : -1;
 $level = isset($in['level']) ? (int) $in['level'] : -1;
+$tier  = isset($in['tier']) ? (int) $in['tier'] : 0;
 $win   = !empty($in['win']);
 
 if (!is_finite($time) || $time < 3.0 || $time > MAX_TIME) {
@@ -182,6 +184,9 @@ if ($kills < 0 || $kills > MAX_KILLS) {
 }
 if ($level < 1 || $level > MAX_LEVEL) {
     fail('bad_level', 422);
+}
+if ($tier < 0 || $tier > MAX_TIER) {
+    fail('bad_tier', 422);
 }
 
 // límite sencillo por IP (evita floods; no es seguridad fuerte)
@@ -226,6 +231,7 @@ $entry = [
     'time'  => round($time, 1),
     'kills' => $kills,
     'level' => $level,
+    'tier'  => $tier,
     'win'   => $win,
     'at'    => $now,
 ];
@@ -261,5 +267,6 @@ respond([
     'total'  => count($scores),
     'name'   => $name,
     'time'   => $entry['time'],
+    'tier'   => $tier,
     'scores' => array_slice($scores, 0, TOP_DEFAULT),
 ]);

@@ -23,6 +23,7 @@ window.Game = (function () {
     lastUISync: 0,
     victoryPending: false,
     _lowT: -99,
+    biome: null, bitMul: 1, xpMul: 1, revived: false,
   };
 
   // ---------------- FRASES (miedo a trabajar) ----------------
@@ -49,6 +50,13 @@ window.Game = (function () {
     G.obsChunks = new Map(); G.destroyed = new Set();
     G._chunkSig = ''; G._obsRev = 0; G._llT = 0; G._lowT = -99;
     G.lastUISync = 0;
+    G.revived = false;
+
+    // nivel de directo y bioma de esta partida
+    const tm = UI.tierMults();
+    G.bitMul = tm.bits * (1 + 0.10 * ((UI.meta.shop.greed | 0) || 0));
+    G.xpMul = tm.xp;
+    G.biome = window.Biomes ? Biomes.forTier(UI.tierIndex()) : null;
 
     G.player = Player.create(UI.meta.char);
     Weapons.reset();
@@ -56,8 +64,8 @@ window.Game = (function () {
     Upgrades.recompute();
     G.player.hp = G.player.stats.maxHP;
 
-    // arma inicial
-    Weapons.grant(UI.meta.char === 'alex' ? 'alejandro' : 'polaroid');
+    // arma inicial: Alejandro ya no depende del compañero temporal
+    Weapons.grant(UI.meta.char === 'alex' ? 'taper' : 'polaroid');
     G.player.x = 0; G.player.y = 0;
     G.state = 'playing';
     UI.hideAllScreens();
@@ -117,10 +125,11 @@ window.Game = (function () {
     if (Math.random() < Math.min(0.5, (G.player.stats.luck || 0))) val *= 2;
     dropPickup('xp', e.x, e.y, val);
 
-    // bits
-    if (t.boss) dropPickup('bit', e.x, e.y, 25 + Math.floor(Math.random() * 25));
-    else if (t.elite) dropPickup('bit', e.x, e.y, 8 + Math.floor(Math.random() * 8));
-    else if (Math.random() < 0.3 + (G.player.stats.luck || 0) * 0.2) dropPickup('bit', e.x, e.y, 1 + Math.floor(Math.random() * 3));
+    // bits (la dificultad paga: multiplicador del nivel de directo + maldición)
+    const bm = G.bitMul || 1;
+    if (t.boss) dropPickup('bit', e.x, e.y, Math.round((25 + Math.floor(Math.random() * 25)) * bm));
+    else if (t.elite) dropPickup('bit', e.x, e.y, Math.round((8 + Math.floor(Math.random() * 8)) * bm));
+    else if (Math.random() < 0.3 + (G.player.stats.luck || 0) * 0.2) dropPickup('bit', e.x, e.y, Math.max(1, Math.round((1 + Math.floor(Math.random() * 3)) * bm)));
 
     // comida
     if (Math.random() < 0.025) dropPickup('food', e.x, e.y, 30);
@@ -132,8 +141,9 @@ window.Game = (function () {
     G.shake = Math.max(G.shake, t.boss ? 8 : 1.5);
     burst(e.x, e.y, t.boss ? 24 : 6, t.boss ? '#ff5f7e' : '#c9c9d4');
 
-    if (t.boss && e.type === 'burocracia') triggerVictory();
-    if (t.boss) UI.updateBoss(G.enemies.find(x => x.t.boss && x.hp > 0) || null);
+    // solo el jefe final cierra el directo: a partir del nivel #2 la
+    // Burocracia es un boss de mitad y la Pelirroja la que da la victoria.
+    if (t.boss && e.final) triggerVictory();    if (t.boss) UI.updateBoss(G.enemies.find(x => x.t.boss && x.hp > 0) || null);
     if (t.elite) UI.subtitle('💀 Cofre de suscriptor: ¡recógelo!');
     if (e.type === 'picao') UI.subtitle('El Picao se ha ido a llorar a otro chat.');
   }
@@ -164,6 +174,25 @@ window.Game = (function () {
     G.texts.push({ x: p.x, y: p.y - 20, txt: '-' + Math.round(real), t: 0.7, color: '#ff5f7e' });
     burst(p.x, p.y, 8, '#ff5f7e');
     if (p.hp <= 0) {
+      // Segunda toma: la mejora permanente de la tienda.
+      if (UI.meta.shop.revive > 0 && !G.revived) {
+        G.revived = true;
+        p.hp = Math.max(1, Math.floor(p.stats.maxHP * 0.5));
+        p.invuln = 2;
+        G.shake = 12;
+        for (let i = G.enemies.length - 1; i >= 0; i--) {
+          const e = G.enemies[i];
+          if (!e || e.t.boss) continue;
+          const dx = e.x - p.x, dy = e.y - p.y;
+          const d = Math.sqrt(dx * dx + dy * dy) || 1;
+          if (d < 130) damageEnemy(e, 60, { kb: 200, kx: dx / d, ky: dy / d });
+        }
+        AudioFX.levelup();
+        UI.announce('¡SEGUNDA TOMA!', true);
+        UI.subtitle('"No he cerrado el directo, solo he pausado." — misspolaroid');
+        UI.damageFlash();
+        return;
+      }
       p.hp = 0;
       triggerGameOver();
       return;
@@ -182,7 +211,7 @@ window.Game = (function () {
 
   function addXP(v) {
     const p = G.player;
-    p.xp += v;
+    p.xp += v * (G.xpMul || 1) * ((p.stats && p.stats.xpMul) || 1);
     while (p.xp >= p.xpNeed) {
       p.xp -= p.xpNeed;
       p.level++;
@@ -265,10 +294,11 @@ window.Game = (function () {
   }
 
   // ---------------- FINAL ----------------
-  function statsObj() {
+  function statsObj(tier) {
     return {
       time: G.time, kills: G.kills, level: G.player.level,
       bits: G.runBits + G.bonusBits, alive: G.enemies.length,
+      tier: tier === undefined ? UI.tierIndex() : tier,
     };
   }
 
@@ -276,10 +306,14 @@ window.Game = (function () {
     if (G.ended) return;
     G.ended = true;
     G.victoryDelay = 0;
+    const runTier = UI.tierIndex();
     const total = G.runBits + G.bonusBits;
     UI.addBits(total);
     UI.meta.totalRuns++;
-    if (win) UI.meta.wins++;
+    if (win) {
+      UI.meta.wins++;
+      UI.addTier();
+    }
     if (G.time > UI.meta.bestTime) UI.meta.bestTime = Math.floor(G.time);
     UI.save();
     G.state = win ? 'victory' : 'gameover';
@@ -288,7 +322,7 @@ window.Game = (function () {
     UI.updateBoss(null);
     const back = () => { UI.renderMenu(); G.state = 'menu'; };
     const retry = () => { reset(); };
-    const st = statsObj();
+    const st = statsObj(runTier);
     if (win) {
       AudioFX.win();
       UI.victory(st, retry, back, '"Subathon aguantado. Cero currículums, cero firmas." — misspolaroid');
@@ -320,12 +354,24 @@ window.Game = (function () {
   const CHUNK = 256;
   const OBS_TYPES = ['impresora', 'taquilla', 'vending', 'planta', 'maceta', 'cajas', 'arbol', 'roca'];
   const DECO_TYPES = ['chimenea', 'estanteria', 'tvstream', 'gato', 'lampara'];
-  const OBS_HP = { impresora: 20, taquilla: 30, vending: 34, planta: 14, maceta: 14, cajas: 26, arbol: 40, roca: 48 };
-  const OBS_R = { impresora: 11, taquilla: 12, vending: 12, planta: 9, maceta: 8, cajas: 12, arbol: 10, roca: 12, chimenea: 13, estanteria: 13, tvstream: 11, gato: 7, lampara: 6 };
+  const OBS_HP = {
+    impresora: 20, taquilla: 30, vending: 34, planta: 14, maceta: 14, cajas: 26, arbol: 40, roca: 48,
+    sillon: 24, escritorio: 28, camara: 18, tripoide: 14, foco: 16,
+  };
+  const OBS_R = {
+    impresora: 11, taquilla: 12, vending: 12, planta: 9, maceta: 8, cajas: 12, arbol: 10, roca: 12,
+    chimenea: 13, estanteria: 13, tvstream: 11, gato: 7, lampara: 6,
+    sillon: 12, escritorio: 13, camara: 9, tripoide: 8, foco: 8,
+    peluche_oso: 5, peluche_conejo: 5, peluche_pingu: 5, peluche_pulpo: 5,
+  };
+
+  function biome() {
+    return G.biome || { id: 'cabin', rug: 8, density: 0.55, obs: OBS_TYPES, deco: DECO_TYPES };
+  }
 
   function ensureChunks() {
     const pcx = Math.floor(G.player.x / CHUNK), pcy = Math.floor(G.player.y / CHUNK);
-    const sig = pcx + ',' + pcy + ',' + G._obsRev;
+    const sig = pcx + ',' + pcy + ',' + G._obsRev + ',' + biome().id;
     if (sig === G._chunkSig) return;
     G._chunkSig = sig;
 
@@ -351,22 +397,49 @@ window.Game = (function () {
 
   function genChunk(cx, cy, key) {
     const out = [];
+    const b = biome();
+    const obsPool = b.obs && b.obs.length ? b.obs : OBS_TYPES;
+    const decoPool = b.deco && b.deco.length ? b.deco : DECO_TYPES;
+    const density = typeof b.density === 'number' ? b.density : 0.55;
     for (let i = 0; i < 8; i++) {
       const h = Sprites.hash2(cx * 131 + i * 17, cy * 977 + i * 53);
-      if (h > 0.55) continue; // densidad
+      if (h > density) continue; // densidad por bioma
       const ox = cx * CHUNK + Sprites.hash2(cx + i * 7, cy * 3 + i) * (CHUNK - 40) + 20;
       const oy = cy * CHUNK + Sprites.hash2(cx * 5 + i, cy * 11 + i * 9) * (CHUNK - 40) + 20;
       if (cx === 0 && cy === 0 && Math.sqrt(ox * ox + oy * oy) < 80) continue; // spawn limpio
       const deco = Sprites.hash2(ox + 13, oy + 29) < 0.42;
-      const type = deco
-        ? DECO_TYPES[Math.floor(Sprites.hash2(ox, oy + 5) * DECO_TYPES.length)]
-        : OBS_TYPES[Math.floor(Sprites.hash2(ox + 5, oy) * OBS_TYPES.length)];
+      const pool = deco ? decoPool : obsPool;
+      const type = pool[Math.floor(Sprites.hash2(ox, oy + 5) * pool.length) % pool.length];
       const okey = key + '_' + i;
       if (G.destroyed.has(okey)) continue;
       out.push({
         key: okey, x: ox, y: oy, type, deco,
-        hp: deco ? 1e9 : OBS_HP[type], maxHp: deco ? 1e9 : OBS_HP[type],
+        hp: deco ? 1e9 : (OBS_HP[type] || 20), maxHp: deco ? 1e9 : (OBS_HP[type] || 20),
         r: 9, or: OBS_R[type] || 9, flash: 0, gone: false,
+      });
+    }
+    // la cabaña siempre tiene peluches tirados (no bloquean)
+    if (b.id === 'cabin') {
+      const plush = ['peluche_oso', 'peluche_conejo', 'peluche_pingu', 'peluche_pulpo'];
+      const spots = [];
+      if (cx === 0 && cy === 0) {
+        spots.push([-64, 44], [58, 52], [-42, -58], [70, -46]);
+      }
+      const h2 = Sprites.hash2(cx * 71 + 5, cy * 89 + 3);
+      if (h2 < 0.72) {
+        spots.push([
+          cx * CHUNK + 30 + h2 * (CHUNK - 60),
+          cy * CHUNK + 30 + Sprites.hash2(cx * 13 + 7, cy * 37 + 11) * (CHUNK - 60),
+        ]);
+      }
+      spots.forEach((s, k) => {
+        const pkey = key + '_p' + k;
+        if (G.destroyed.has(pkey)) return;
+        const type2 = plush[Math.floor(h2 * 97 + k * 3) % plush.length];
+        out.push({
+          key: pkey, x: s[0], y: s[1], type: type2, deco: true,
+          hp: 1e9, maxHp: 1e9, r: 5, or: OBS_R[type2] || 5, flash: 0, gone: false,
+        });
       });
     }
     return out;
@@ -376,6 +449,7 @@ window.Game = (function () {
   function collidePlayer(p) {
     for (const o of G.obstacles) {
       if (o.gone) continue;
+      if (o.deco && o.type.indexOf('peluche_') === 0) continue; // peluches: solo decorado
       const dx = p.x - o.x, dy = p.y - o.y;
       const min = p.r + o.or;
       const d2 = dx * dx + dy * dy;
@@ -539,10 +613,16 @@ window.Game = (function () {
     const T = 16;
     const x0 = Math.floor(camX / T) - 1, y0 = Math.floor(camY / T) - 1;
     const cols = Math.ceil(W / T) + 2, rows = Math.ceil(H / T) + 2;
+    const b = biome();
     for (let ty = y0; ty < y0 + rows; ty++) {
       for (let tx = x0; tx < x0 + cols; tx++) {
-        ctx.drawImage(Sprites.tile(tx, ty), tx * T - camX, ty * T - camY);
+        ctx.drawImage(Sprites.tile(tx, ty, b.id, b.rug), tx * T - camX, ty * T - camY);
       }
+    }
+    // tinte ambiental del bioma (solo el suelo, para no lavar a los personajes)
+    if (b.tint) {
+      ctx.fillStyle = b.tint;
+      ctx.fillRect(0, 0, W, H);
     }
 
     ctx.save();

@@ -186,18 +186,90 @@ window.Weapons = (function () {
         const n = (ev ? 2 : 1) + Math.floor(S.amount / 2);
         const tgt = nearest(g, alex.x, alex.y, 320);
         if (tgt) {
+          const flashCam = g.player.char === 'alex'; // con Alex, la compañera es Mara y hace fotos
           for (let i = 0; i < n; i++) {
             const dx = tgt.x - alex.x + (i - (n - 1) / 2) * 14, dy = tgt.y - alex.y;
             const l = Math.sqrt(dx * dx + dy * dy) || 1;
             projectiles.push({
               x: alex.x, y: alex.y - 6,
               vx: dx / l * speed, vy: dy / l * speed,
-              dmg, life: 2.2, kind: 'comida',
+              dmg, life: 2.2, kind: flashCam ? 'flash' : 'comida',
               homing: ev ? 7 : 4.5, pierce: 0, scale: S.area,
             });
           }
-          AudioFX.shoot();
+          AudioFX.flash();
         }
+        w.t = cd;
+        break;
+      }
+
+      case 'taper': {
+        // arco: cae al suelo y deja comida que ralentiza
+        const dmg = lv(w, ev ? [22] : [10, 13, 17, 21, 26]) * S.might;
+        const speed = lv(w, [200, 205, 210, 215, 220]);
+        const n = (ev ? 2 : 1) + (lvl >= 5 ? 1 : 0) + Math.floor(S.amount / 2);
+        const cd = (ev ? 1.5 : lv(w, [2.0, 1.9, 1.8, 1.7, 1.6])) * S.cooldown;
+        const a = aimDir(g);
+        const baseAng = Math.atan2(a.y, a.x);
+        for (let i = 0; i < n; i++) {
+          if (projectiles.length >= 400) break;
+          const ang = baseAng + (i - (n - 1) / 2) * 0.32;
+          projectiles.push({
+            x: g.player.x, y: g.player.y - 6,
+            vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+            dmg, life: 1.1, kind: 'taper', splash: (ev ? 34 : 26) * S.area,
+            scale: S.area, arc: true, z: 14, vz: 120,
+          });
+        }
+        AudioFX.shoot();
+        w.t = cd;
+        break;
+      }
+
+      case 'vaso': {
+        // se rompe en charco y PRENDE FUEGO al rato
+        const dmg = lv(w, ev ? [16] : [8, 10, 13, 16, 20]) * S.might;
+        const speed = lv(w, [170, 175, 180, 185, 190]);
+        const n = 1 + Math.floor(lvl / 3) + Math.floor(S.amount / 2);
+        const cd = (ev ? 2.0 : lv(w, [2.6, 2.45, 2.3, 2.15, 2.0])) * S.cooldown;
+        const a = aimDir(g);
+        const baseAng = Math.atan2(a.y, a.x);
+        for (let i = 0; i < n; i++) {
+          if (projectiles.length >= 400) break;
+          const ang = baseAng + (i - (n - 1) / 2) * 0.4;
+          projectiles.push({
+            x: g.player.x, y: g.player.y - 6,
+            vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+            dmg, life: 1.0, kind: 'vaso', ev,
+            splash: (ev ? 34 : 26) * S.area, scale: S.area,
+            arc: true, z: 16, vz: 130,
+          });
+        }
+        AudioFX.shoot();
+        w.t = cd;
+        break;
+      }
+
+      case 'lanza': {
+        // estocada corta + corazones teledirigidos
+        const dmg = lv(w, ev ? [26] : [12, 15, 19, 23, 28]) * S.might;
+        const range = (ev ? 70 : lv(w, [54, 58, 62, 66, 72])) * S.area;
+        const cd = (ev ? 0.75 : lv(w, [1.2, 1.15, 1.1, 1.05, 1.0])) * S.cooldown;
+        const a = aimDir(g);
+        const ang = Math.atan2(a.y, a.x);
+        hitCone(g, g.player.x, g.player.y, ang, 1.25, range, dmg, 90);
+        const hearts = (ev ? 3 : 1) + Math.floor(S.amount / 2);
+        for (let i = 0; i < hearts; i++) {
+          if (projectiles.length >= 400) break;
+          const ha = ang + (i - (hearts - 1) / 2) * 0.5;
+          projectiles.push({
+            x: g.player.x, y: g.player.y - 4,
+            vx: Math.cos(ha) * 150, vy: Math.sin(ha) * 150,
+            dmg: dmg * 0.4, life: 1.8, kind: 'heart',
+            homing: 5, pierce: ev ? 99 : 0, scale: S.area,
+          });
+        }
+        AudioFX.shoot();
         w.t = cd;
         break;
       }
@@ -298,6 +370,36 @@ window.Weapons = (function () {
     // proyectiles
     for (let i = projectiles.length - 1; i >= 0; i--) {
       const p = projectiles[i];
+      if (p.arc) {
+        // táper / vaso: vuelo en arco y aterrizaje
+        p.life -= dt;
+        p.z += p.vz * dt;
+        p.vz -= 300 * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        if (p.z <= 0 || p.life <= 0) {
+          p.z = 0;
+          if (p.kind === 'taper') {
+            zones.push({
+              x: p.x, y: p.y, r: p.splash, dmg: p.dmg * 0.35,
+              t: 1.2 * S.duration, tick: 0.4, kind: 'comida', slow: 1.2,
+            });
+            g.fx.push({ kind: 'ring', x: p.x, y: p.y, r: 4, max: p.splash, t: 0.25, color: '#d99a54' });
+          } else if (p.kind === 'vaso') {
+            zones.push({
+              x: p.x, y: p.y, r: p.splash * 0.9, dmg: 0,
+              t: 2.6 * S.duration, tick: 0.4, kind: 'alcohol',
+              slow: 1.2, ignite: 0.9,
+              burn: (p.ev ? 3.6 : 2.2) * S.duration,
+              burnR: (p.ev ? 40 : 28) * S.area,
+              burnDmg: p.dmg * 0.9,
+            });
+          }
+          g.damageObstaclesAt(p.x, p.y, 10, p.dmg);
+          projectiles.splice(i, 1);
+        }
+        continue;
+      }
       p.life -= dt;
       if (p.homing) {
         const t = nearest(g, p.x, p.y, 300);
@@ -325,7 +427,7 @@ window.Weapons = (function () {
             if (p.kind === 'caca') {
               zones.push({
                 x: p.x, y: p.y, r: p.splash, dmg: p.dmg * 0.45,
-                t: 1.6, tick: 0.35, kind: 'charco',
+                t: 1.6 * S.duration, tick: 0.35, kind: 'charco',
               });
             }
             if (p.pierce > 0) p.pierce--;
@@ -336,7 +438,7 @@ window.Weapons = (function () {
       }
       if (dead) {
         if (p.kind === 'caca' && p.life <= 0) {
-          zones.push({ x: p.x, y: p.y, r: p.splash, dmg: p.dmg * 0.45, t: 1.6, tick: 0.35, kind: 'charco' });
+          zones.push({ x: p.x, y: p.y, r: p.splash, dmg: p.dmg * 0.45, t: 1.6 * S.duration, tick: 0.35, kind: 'charco' });
         }
         g.damageObstaclesAt(p.x, p.y, 8, p.dmg);
         projectiles.splice(i, 1);
@@ -363,17 +465,32 @@ window.Weapons = (function () {
     for (let i = zones.length - 1; i >= 0; i--) {
       const z = zones[i];
       if (z.kind === 'steam') { zones.splice(i, 1); continue; }
+      // el charco de alcohol prende fuego pasado un rato
+      if (z.ignite !== undefined) {
+        z.ignite -= dt;
+        if (z.ignite <= 0) {
+          z.kind = 'fuego';
+          z.t = z.burn || 2.2;
+          z.tick = 0.25;
+          z.r = z.burnR || z.r;
+          z.dmg = z.burnDmg || z.dmg;
+          z.ignite = undefined;
+          AudioFX.explode();
+        }
+      }
       z.t -= dt;
       z.tick -= dt;
       if (z.tick <= 0) {
-        z.tick = z.kind === 'nube' ? 0.5 : 0.35;
+        z.tick = z.kind === 'nube' ? 0.5 : (z.kind === 'fuego' ? 0.25 : 0.35);
         for (let j = g.enemies.length - 1; j >= 0; j--) {
           const e = g.enemies[j];
           if (!e || e.hp <= 0) continue;
           const dx = e.x - z.x, dy = e.y - z.y;
           const d2 = dx * dx + dy * dy;
           if (d2 < z.r * z.r) {
-            if (z.kb) {
+            if (!z.dmg && z.slow) {
+              e.slow = Math.max(e.slow, z.slow);
+            } else if (z.kb) {
               const d = Math.sqrt(d2) || 1;
               g.damageEnemy(e, z.dmg, { kb: z.kb, kx: dx / d, ky: dy / d, slow: z.slow || 0 });
             } else {
@@ -484,6 +601,34 @@ window.Weapons = (function () {
       } else if (z.kind === 'boom') {
         ctx.fillStyle = 'rgba(255,140,60,' + (z.t * 3) + ')';
         ctx.beginPath(); ctx.arc(z.x, z.y, z.r * (1.6 - z.t * 2), 0, Math.PI * 2); ctx.fill();
+      } else if (z.kind === 'comida') {
+        // táper abierto con comida
+        ctx.fillStyle = 'rgba(90,60,30,0.45)';
+        ctx.beginPath(); ctx.ellipse(z.x, z.y, z.r, z.r * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(217,154,84,0.65)';
+        ctx.beginPath(); ctx.ellipse(z.x, z.y - 1, z.r * 0.65, z.r * 0.38, 0, 0, Math.PI * 2); ctx.fill();
+        for (let b = 0; b < 4; b++) {
+          const bx = z.x + Math.cos(b * 1.57 + 0.4) * z.r * 0.42;
+          const by = z.y + Math.sin(b * 1.57 + 0.4) * z.r * 0.26;
+          ctx.fillStyle = ['#3fae6a', '#ff4d6d', '#ffe45e', '#b57a3c'][b];
+          ctx.fillRect(Math.round(bx) - 1, Math.round(by) - 1, 2, 2);
+        }
+      } else if (z.kind === 'alcohol') {
+        ctx.fillStyle = 'rgba(210,190,120,0.42)';
+        ctx.beginPath(); ctx.ellipse(z.x, z.y, z.r, z.r * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.beginPath(); ctx.ellipse(z.x - z.r * 0.3, z.y - z.r * 0.12, z.r * 0.28, z.r * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+      } else if (z.kind === 'fuego') {
+        const tt = performance.now() / 90;
+        ctx.fillStyle = 'rgba(255,120,40,0.32)';
+        ctx.beginPath(); ctx.ellipse(z.x, z.y, z.r, z.r * 0.62, 0, 0, Math.PI * 2); ctx.fill();
+        for (let b = 0; b < 5; b++) {
+          const a2 = tt + b * 1.26;
+          const fx = z.x + Math.cos(a2) * z.r * 0.45;
+          const fh = z.r * (0.8 + 0.25 * Math.sin(a2 * 2.1));
+          ctx.fillStyle = b % 2 ? 'rgba(255,210,74,0.85)' : 'rgba(255,120,40,0.85)';
+          ctx.beginPath(); ctx.ellipse(fx, z.y - fh * 0.35, z.r * 0.22, fh * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+        }
       }
       ctx.restore();
     }
@@ -545,8 +690,28 @@ window.Weapons = (function () {
 
     // proyectiles (sprites pixel)
     for (const p of projectiles) {
-      const img = Sprites.get(p.kind === 'caca' ? 'caca' : p.kind === 'comida' ? 'comida' : 'chat');
-      const sc = p.kind === 'chat' ? 1 : 1.4;
+      const zy = p.z || 0;
+      if (p.kind === 'flash') {
+        // flash de cámara de Mara
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const g2 = ctx.createRadialGradient(p.x, p.y - zy, 1, p.x, p.y - zy, 12);
+        g2.addColorStop(0, 'rgba(255,255,255,0.95)');
+        g2.addColorStop(0.5, 'rgba(255,244,200,0.6)');
+        g2.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g2;
+        ctx.beginPath(); ctx.arc(p.x, p.y - zy, 12, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        continue;
+      }
+      const img = Sprites.get(
+        p.kind === 'caca' ? 'caca'
+          : p.kind === 'comida' ? 'comida'
+            : p.kind === 'taper' ? 'taper'
+              : p.kind === 'vaso' ? 'vaso'
+                : p.kind === 'heart' ? 'heart'
+                  : 'chat');
+      const sc = (p.kind === 'chat' || p.kind === 'heart') ? 1 : 1.3;
       const w = img.width * sc, h = img.height * sc;
       if (p.kind === 'chat') {
         // emote real de 7TV (fallback: burbuja clásica)
@@ -572,7 +737,7 @@ window.Weapons = (function () {
         }
         ctx.restore();
       } else {
-        ctx.drawImage(img, p.x - w / 2, p.y - h / 2, w, h);
+        ctx.drawImage(img, p.x - w / 2, p.y - h / 2 - zy, w, h);
       }
     }
 
@@ -602,5 +767,5 @@ window.Weapons = (function () {
     }
   }
 
-  return { reset, grant, onLevel, update, drawGround, drawAir, get projectiles() { return projectiles; } };
+  return { reset, grant, onLevel, update, drawGround, drawAir, get projectiles() { return projectiles; }, get zones() { return zones; } };
 })();

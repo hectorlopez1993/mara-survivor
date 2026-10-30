@@ -67,14 +67,19 @@ window.Ranking = (function () {
     });
   }
 
-  function submit(stats, win) {
-    const payload = {
+  function buildPayload(stats, win) {
+    return {
       name: getName(),
       time: Number(stats && stats.time) || 0,
       kills: Number(stats && stats.kills) || 0,
       level: Number(stats && stats.level) || 1,
+      tier: Math.max(0, Math.min(999, Number(stats && stats.tier) || 0)),
       win: !!win,
     };
+  }
+
+  function submit(stats, win) {
+    const payload = buildPayload(stats, win);
     return request(ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -142,7 +147,10 @@ window.Ranking = (function () {
       row.className = 'rank-row' + (i < 3 ? ' top' + (i + 1) : '') +
         (String(s.name).toLowerCase() === me.toLowerCase() ? ' me' : '');
       row.appendChild(cell('span', 'pos', String(i + 1)));
-      row.appendChild(cell('span', 'who', s.name || 'ANON'));
+      const who = cell('span', 'who', s.name || 'ANON');
+      const badge = cell('span', 'rank-tier', 'D#' + (s.tier | 0));
+      who.appendChild(badge);
+      row.appendChild(who);
       row.appendChild(cell('span', 'time', fmt(s.time)));
       row.appendChild(cell('span', 'kills', String(s.kills | 0)));
       row.appendChild(cell('span', 'lvl', String(s.level | 0)));
@@ -231,5 +239,5 @@ window.Ranking = (function () {
 
   init();
 
-  return { init, open, top, submit, describe, refresh, render, getName, setName, ENDPOINT };
+  return { init, open, top, submit, buildPayload, describe, refresh, render, getName, setName, ENDPOINT };
 })();

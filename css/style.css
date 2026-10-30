@@ -924,6 +924,35 @@ kbd {
   white-space: nowrap;
 }
 
+.shop-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 5px;
+}
+
+.shop-tab {
+  flex: 1;
+  padding: 4px 6px;
+  background: #171226;
+  color: #9a90b8;
+  border: 2px solid #000;
+  border-radius: 2px;
+  box-shadow: 2px 2px 0 #000;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.shop-tab:hover { color: var(--ink); }
+
+.shop-tab.on {
+  background: var(--acid);
+  color: #1a1200;
+  box-shadow: 1px 1px 0 #000;
+}
+
 #shop-list {
   display: flex;
   flex-direction: column;
@@ -1910,6 +1939,15 @@ h2.win::before { content: "★ "; }
 
 .rank-row .pos { color: var(--dim); font-weight: bold; text-align: right; }
 .rank-row .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
+.rank-row .rank-tier {
+  margin-left: 4px;
+  padding: 0 2px;
+  background: #1b1505;
+  border: 1px solid #5c4a10;
+  color: var(--acid);
+  font-size: 7px;
+  letter-spacing: .02em;
+}
 .rank-row .time { color: var(--acid); font-weight: bold; }
 .rank-row .kills,
 .rank-row .lvl { color: var(--muted); text-align: right; }

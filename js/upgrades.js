@@ -17,6 +17,8 @@ window.Upgrades = (function () {
       luck: 0,                // 0..1
       rerolls: 1, skips: 1, banishes: 1,
       dodge: 0,               // 0..0.5
+      xpMul: 1,               // multiplicador de XP (mochila)
+      duration: 1,            // duración de charcos/fuego (cubito)
       headScale: 1.0,         // visual Cabeza Gigante
       headScaleAdd: 0,        // visual Cabeza Gravitatoria
     };
@@ -63,8 +65,8 @@ window.Upgrades = (function () {
     alejandro: {
       name: 'Alejandro', short: 'Alex', icon: 'alejandro',
       max: 5, evo: 'comida', evoName: 'Banquete Familiar',
-      desc: 'Tu hermano aparece en ráfagas de 3.5s (luego se va 14s) a lanzar comida.',
-      evoDesc: 'Doble comida con seguimiento perfecto.',
+      desc: 'Tu compañero aparece en ráfagas de 3.5s (luego se va 14s). Con Alex, viene Mara.',
+      evoDesc: 'Doble ataque con seguimiento perfecto.',
       base: { cd: 1.8, dmg: 11, speed: 165 },
     },
     grito: {
@@ -78,6 +80,28 @@ window.Upgrades = (function () {
       name: 'Pedo', short: 'Pedo', icon: 'pedo',
       max: 5, desc: 'Nubes verdes que envenenan y empujan a los enemigos.',
       base: { cd: 2.4, dmg: 7, radius: 22 },
+    },
+    // --- armas desbloqueables en la tienda ---
+    taper: {
+      name: 'Táper de mamá', short: 'Táper', icon: 'taper',
+      max: 5, evo: 'comida', evoName: 'Táper Familiar', unlock: 'taper',
+      desc: 'Se lanza en arco y deja comida que ralentiza. Arma inicial de Alejandro.',
+      evoDesc: 'Táperes dobles que dejan un banquete más grande y duradero.',
+      base: { cd: 2.0, dmg: 10, speed: 200 },
+    },
+    vaso: {
+      name: 'Vaso de alcohol', short: 'Vaso', icon: 'vaso',
+      max: 5, evo: 'hielo', evoName: 'Cóctel Molotov', unlock: 'vaso',
+      desc: 'Se rompe en un charco que, al rato, PRENDE FUEGO.',
+      evoDesc: 'El fuego deja rastro y dura mucho más.',
+      base: { cd: 2.6, dmg: 8, speed: 170 },
+    },
+    lanza: {
+      name: 'Lanza de corazones', short: 'Lanza', icon: 'lanza',
+      max: 5, evo: 'corazon', evoName: 'Flecha de Cupido', unlock: 'lanza',
+      desc: 'Estocada corta que dispara corazones teledirigidos.',
+      evoDesc: 'Los corazones PERFORAN a todo lo que pillan.',
+      base: { cd: 1.2, dmg: 12, range: 54 },
     },
   };
 
@@ -129,6 +153,21 @@ window.Upgrades = (function () {
       max: 6, desc: '+20% de atracción de fichas por nivel. Tu cabeza pesa más.',
       apply(s, l) { s.magnet *= (1 + 0.20 * l); s.headScaleAdd += 0.04 * l; },
     },
+    mochila: {
+      name: 'Mochila de mamá', short: 'Mochila', icon: 'mochila',
+      max: 6, desc: '+6% XP y +8% imán por nivel. Siempre trae táper.',
+      apply(s, l) { s.xpMul = (s.xpMul || 1) * (1 + 0.06 * l); s.magnet *= (1 + 0.08 * l); },
+    },
+    hielo: {
+      name: 'Cubito', short: 'Cubito', icon: 'hielo',
+      max: 6, desc: '+6% de área y +10% de duración de charcos y fuego.',
+      apply(s, l) { s.area += 0.06 * l; s.duration *= (1 + 0.10 * l); },
+    },
+    corazon: {
+      name: 'Corazón de Mara', short: 'Corazón', icon: 'corazon',
+      max: 6, desc: '+12 de vida y +0,15 de regeneración por nivel.',
+      apply(s, l) { s.maxHP += 12 * l; s.regen += 0.15 * l; },
+    },
   };
 
   const SLOTS = { weapon: 6, passive: 6 };
@@ -150,11 +189,12 @@ window.Upgrades = (function () {
 
     for (const id in WEAPONS) {
       if (banished.has('w:' + id)) continue;
+      const unlocked = !WEAPONS[id].unlock || (UI.meta.unlocked && UI.meta.unlocked[WEAPONS[id].unlock]);
       const owned = g.weapons.find(w => w.id === id);
       if (owned) {
         if (owned.evolved) continue;
         if (owned.level < WEAPONS[id].max) list.push({ kind: 'wup', id, w: owned });
-      } else if (hasW < SLOTS.weapon) {
+      } else if (hasW < SLOTS.weapon && unlocked) {
         list.push({ kind: 'wnew', id });
       }
     }
@@ -250,6 +290,12 @@ window.Upgrades = (function () {
     s.magnet *= (1 + 0.25 * (shop.magnet || 0));
     s.luck += 0.08 * (shop.luck || 0);
     s.rerolls += (shop.reroll || 0);
+    // mejoras permanentes nuevas
+    s.armor += shop.armor || 0;
+    s.regen += 0.15 * (shop.regen || 0);
+    s.area *= (1 + 0.05 * (shop.area || 0));
+    s.cooldown *= Math.max(0.5, 1 - 0.03 * (shop.cooldown || 0));
+    s.xpMul *= (1 + 0.06 * (shop.growth || 0));
     for (const id in g.passives) {
       const lvl = g.passives[id];
       if (lvl > 0 && PASSIVES[id]) PASSIVES[id].apply(s, lvl);

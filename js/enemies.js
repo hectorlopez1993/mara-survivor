@@ -13,7 +13,15 @@ window.Enemies = (function () {
     picao:     { hp: 380, speed: 30, dmg: 22, r: 17, xp: 45, spr: 'picao',     w: 22, h: 27, boss: true },
     manifestante:{ hp: 48, speed: 46, dmg: 12, r: 10, xp: 6, spr: 'manifestante', w: 19, h: 21 },
     burocracia:{ hp: 1800,speed: 22, dmg: 32, r: 21, xp: 120,spr: 'burocracia',w: 25, h: 23, boss: true },
+    // --- desbloqueados por nivel de directo ---
+    hater:     { hp: 30,  speed: 50, dmg: 8,  r: 8,  xp: 3,  spr: 'hater',     w: 16, h: 16, ranged: true, range: 130, cd: 2.0, proj: 'dislike', tier: 1, minMinute: 2 },
+    reclutador:{ hp: 130, speed: 34, dmg: 18, r: 11, xp: 10, spr: 'reclutador',w: 18, h: 22, charge: true, tier: 2, minMinute: 3 },
+    influencer:{ hp: 65,  speed: 60, dmg: 10, r: 9,  xp: 8,  spr: 'influencer',w: 16, h: 20, aura: true, tier: 3, minMinute: 4 },
+    pelirroja: { hp: 3000,speed: 27, dmg: 40, r: 20, xp: 200,spr: 'pelirroja', w: 26, h: 28, boss: true, finalBoss: true, tier: 2 },
   };
+
+  // Enemigos que se estrenan al subir de nivel de directo.
+  const UNLOCKS = ['hater', 'reclutador', 'influencer'];
 
   // composición de oleadas por minuto (como VS: cambia cada minuto)
   const WAVES = [
@@ -30,7 +38,20 @@ window.Enemies = (function () {
 
   let eproj = [];   // proyectiles enemigos
   let spawnT = 0, eliteT = 0, bossMinDone = new Set(), finalSpawned = false;
-  let lastMin = 0, picaoTauntI = 0;
+  let lastMin = 0, picaoTauntI = 0, pelirrojaTauntI = 0;
+
+  // La Pelirroja: homenaje/parodia de una streamer pelirroja. Solo
+  // coletillas públicas de directo, sin polémicas.
+  const PELIRROJA_TAUNTS = [
+    '"NO ME VAN A MATAR, SOY MUY BUENA EN ESTO."',
+    '"¿QUÉ COJONES ES ESTO?"',
+    '"ME GUSTA HACER STREAM Y TROLLEAR AL CHAT."',
+    '"SOY STREAMER, NO ME DEDICO A TIKTOK."',
+    '"ASDKJSDAJKLSDAJKLDSA."',
+    '"LA VIDA EL LOL."',
+    '"SEPE, PÍDEME PERDÓN."',
+    '"ESTO NO ES UN BAIT, ES CONTENIDO."',
+  ];
 
   // El PICAO: el pesado del chat que no acepta un no. Ataca con su peor
   // arma, el mensaje privado insistente.
@@ -63,11 +84,31 @@ window.Enemies = (function () {
 
   function reset() {
     eproj = []; spawnT = 1.5; eliteT = 120; bossMinDone = new Set(); finalSpawned = false;
-    lastMin = 0; picaoTauntI = 0;
+    lastMin = 0; picaoTauntI = 0; pelirrojaTauntI = 0;
   }
 
-  function waveComp(minute) {
-    return WAVES[Math.min(minute, WAVES.length - 1)];
+  function tier() {
+    return window.UI ? UI.tierIndex() : 0;
+  }
+
+  function waveComp(minute, t) {
+    const lvl = t === undefined ? tier() : Math.max(0, t | 0);
+    const base = WAVES[Math.min(minute, WAVES.length - 1)];
+    const comp = {};
+    for (const k in base) comp[k] = base[k];
+    // los enemigos del directo se mezclan con peso creciente
+    for (const id of UNLOCKS) {
+      const d = TYPES[id];
+      if (lvl < d.tier || minute < d.minMinute) continue;
+      const weight = (d.boss ? 4 : 10) + (lvl - d.tier) * 3;
+      comp[id] = (comp[id] || 0) + weight;
+    }
+    return comp;
+  }
+
+  function bossFor(t) {
+    const lvl = t === undefined ? tier() : Math.max(0, t | 0);
+    return lvl >= 2 ? 'pelirroja' : 'burocracia';
   }
 
   function pickType(comp) {
@@ -90,12 +131,13 @@ window.Enemies = (function () {
   function create(g, type, x, y) {
     const t = TYPES[type];
     const minute = g.time / 60;
-    let hp = t.hp * (1 + minute * 0.34);          // escalado con el tiempo
-    if (t.boss) hp = t.hp * (1 + minute * 0.18);
+    const tm = window.UI ? UI.tierMults() : { hp: 1, speed: 1, dmg: 1 };
+    let hp = t.hp * (1 + minute * 0.34) * tm.hp;          // escalado con el tiempo y el directo
+    if (t.boss) hp = t.hp * (1 + minute * 0.18) * tm.hp;
     const e = {
       type, x, y, hp, maxHp: hp,
-      speed: t.speed * (1 + minute * 0.012),
-      dmg: t.dmg * (1 + minute * 0.05),
+      speed: t.speed * (1 + minute * 0.012) * tm.speed,
+      dmg: t.dmg * (1 + minute * 0.05) * tm.dmg,
       r: t.r, t, flash: 0, slow: 0,
       kb: { x: 0, y: 0 },
       shootT: (t.cd || 2) * Math.random(),
@@ -103,6 +145,12 @@ window.Enemies = (function () {
       pending: null,
       phase: Math.random() * Math.PI * 2,
       flip: false,
+      haste: 0,                // aura de la influencer
+      chargeT: 2 + Math.random() * 2,
+      dashT: 0,
+      dashX: 0, dashY: 0,
+      final: false,
+      atkI: 0,
     };
     g.enemies.push(e);
     return e;
@@ -111,8 +159,9 @@ window.Enemies = (function () {
   function spawnWaveBurst(g) {
     const minute = Math.floor(g.time / 60);
     const comp = waveComp(minute);
-    const n = 3 + Math.min(10, Math.floor(minute * 1.1)) + (Math.random() < 0.4 ? 2 : 0);
-    const maxAlive = 230;
+    const tm = window.UI ? UI.tierMults() : { count: 0, maxAlive: 230 };
+    const n = 3 + Math.min(10, Math.floor(minute * 1.1)) + (Math.random() < 0.4 ? 2 : 0) + Math.floor(tm.count);
+    const maxAlive = tm.maxAlive || 230;
     for (let i = 0; i < n; i++) {
       if (g.enemies.length >= maxAlive) break;
       const type = pickType(comp);
@@ -138,7 +187,8 @@ window.Enemies = (function () {
     // spawns continuos cada pocos segundos
     spawnT -= dt;
     if (spawnT <= 0) {
-      spawnT = Math.max(0.45, 1.6 - minute * 0.09);
+      const tm = window.UI ? UI.tierMults() : { spawn: 1 };
+      spawnT = Math.max(0.35, (1.6 - minute * 0.09) / tm.spawn);
       spawnWaveBurst(g);
     }
 
@@ -158,16 +208,25 @@ window.Enemies = (function () {
     for (const m of [3, 6, 9, 12]) {
       if (minute >= m && !bossMinDone.has(m) && g.time < 15 * 60 - 1) {
         bossMinDone.add(m);
-        if (g.enemies.some(x => x.type === 'picao' && x.hp > 0)) {
-          UI.subtitle('El Picao sigue en pie: no piensa quitarse de tu chat.');
+        // a partir del directo #2 la Burocracia adelanta su cita al minuto 12
+        const midType = (m === 12 && bossFor() === 'pelirroja') ? 'burocracia' : 'picao';
+        if (g.enemies.some(x => x.type === midType && x.hp > 0)) {
+          UI.subtitle(midType === 'picao'
+            ? 'El Picao sigue en pie: no piensa quitarse de tu chat.'
+            : 'La Burocracia sigue tramitando: no piensa irse.');
           continue;
         }
         const p = spawnPos(g);
-        const b = create(g, 'picao', p.x, p.y);
+        const b = create(g, midType, p.x, p.y);
         b.hp *= 1 + (m / 6); b.maxHp = b.hp;
         AudioFX.boss();
-        UI.announce('¡EL PICAO!', true);
-        UI.subtitle('"Te doné 1000€, hazme caso." — El Picao');
+        if (midType === 'picao') {
+          UI.announce('¡EL PICAO!', true);
+          UI.subtitle('"Te doné 1000€, hazme caso." — El Picao');
+        } else {
+          UI.announce('¡LA BUROCRACIA!', true);
+          UI.subtitle('47 formularios y todos piden experiencia.');
+        }
       }
     }
 
@@ -179,10 +238,17 @@ window.Enemies = (function () {
         if (g.enemies[i].type === 'picao') g.enemies.splice(i, 1);
       }
       const p = spawnPos(g);
-      create(g, 'burocracia', p.x, p.y);
+      const who = bossFor();
+      const b = create(g, who, p.x, p.y);
+      b.final = true;
       AudioFX.boss();
-      UI.announce('¡LA BUROCRACIA SUPREMA!', true);
-      UI.subtitle('El jefe final: 47 formularios... ¡y todos piden experiencia!');
+      if (who === 'pelirroja') {
+        UI.announce('¡LA PELIRROJA!', true);
+        UI.subtitle('"NO ME VAN A MATAR, SOY MUY BUENA EN ESTO."');
+      } else {
+        UI.announce('¡LA BUROCRACIA SUPREMA!', true);
+        UI.subtitle('El jefe final: 47 formularios... ¡y todos piden experiencia!');
+      }
     }
   }
 
@@ -195,6 +261,7 @@ window.Enemies = (function () {
       const e = g.enemies[i];
       if (e.flash > 0) e.flash -= dt;
       if (e.slow > 0) e.slow -= dt;
+      if (e.haste > 0) e.haste -= dt;
 
       // knockback
       if (e.kb.x || e.kb.y) {
@@ -207,7 +274,8 @@ window.Enemies = (function () {
       const dx = p.x - e.x, dy = p.y - e.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       const slowK = e.slow > 0 ? 0.45 : 1;
-      const sp = e.speed * slowK;
+      const hasteK = e.haste > 0 ? 1.3 : 1;
+      const sp = e.speed * slowK * hasteK;
 
       if (e.t.ranged) {
         // mantiene distancia y dispara
@@ -223,9 +291,39 @@ window.Enemies = (function () {
           const a = Math.atan2(dy, dx);
           eproj.push({
             x: e.x, y: e.y, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120,
-            dmg: e.dmg * 0.8, life: 3.2, kind: 'oferta',
+            dmg: e.dmg * 0.8, life: 3.2, kind: e.t.proj || 'oferta',
           });
           AudioFX.shoot();
+        }
+      } else if (e.t.aura) {
+        // la influencer huye si te acercas y acelera a los suyos
+        if (dx < 0) e.flip = true; else if (dx > 0) e.flip = false;
+        const away = dist < 96;
+        e.x += (away ? -dx / dist : dx / dist) * sp * dt;
+        e.y += (away ? -dy / dist : dy / dist) * sp * dt;
+        for (const o of g.enemies) {
+          if (o === e) continue;
+          const ox = o.x - e.x, oy = o.y - e.y;
+          if (ox * ox + oy * oy < 96 * 96) o.haste = 0.25;
+        }
+      } else if (e.t.charge) {
+        // el reclutador embiste en línea recta cada 3,5 s
+        if (dx < 0) e.flip = true; else if (dx > 0) e.flip = false;
+        if (e.dashT > 0) {
+          e.dashT -= dt;
+          e.x += e.dashX * 240 * slowK * dt;
+          e.y += e.dashY * 240 * slowK * dt;
+        } else {
+          e.x += dx / dist * sp * dt;
+          e.y += dy / dist * sp * dt;
+          e.chargeT -= dt;
+          if (e.chargeT <= 0 && dist < 280) {
+            e.chargeT = 3.5;
+            e.dashT = 0.35;
+            e.dashX = dx / dist;
+            e.dashY = dy / dist;
+            AudioFX.scream();
+          }
         }
       } else {
         // persecución directa
@@ -245,6 +343,12 @@ window.Enemies = (function () {
           if (e.type === 'picao') {
             e.atkT = 4;
             e.pending = { kind: 'wave', t: 0.45 };
+          } else if (e.type === 'pelirroja') {
+            // alterna likes, bait e invocación de haters
+            const kinds = ['likes', 'bait', 'summon'];
+            const kind = kinds[(e.atkI++ || 0) % kinds.length];
+            e.atkT = kind === 'summon' ? 4.5 : 3.2;
+            e.pending = { kind, t: 0.6 };
           } else {
             e.atkT = 3;
             e.pending = { kind: 'burst', t: 0.6 };
@@ -313,6 +417,31 @@ window.Enemies = (function () {
       }
       AudioFX.explode();
       g.shake = Math.max(g.shake, 6);
+    } else if (kind === 'likes') {
+      // ráfaga de corazones en abanico hacia el jugador
+      const base = Math.atan2(g.player.y - e.y, g.player.x - e.x);
+      for (let k = -2; k <= 2; k++) {
+        const a = base + k * 0.22;
+        eproj.push({
+          x: e.x, y: e.y, vx: Math.cos(a) * 130, vy: Math.sin(a) * 130,
+          dmg: e.dmg * 0.45, life: 4, kind: 'like',
+        });
+      }
+      UI.subtitle(PELIRROJA_TAUNTS[pelirrojaTauntI++ % PELIRROJA_TAUNTS.length]);
+      AudioFX.shoot();
+    } else if (kind === 'bait') {
+      // bait que explota a su alrededor
+      bossWave(g, e, 84, e.dmg * 0.8, '#ff4d6d');
+      g.fx.push({ kind: 'ring', x: e.x, y: e.y, r: 10, max: 84, t: 0.5, color: '#ffd24a' });
+      UI.subtitle('"ESTO NO ES UN BAIT, ES CONTENIDO."');
+      g.shake = Math.max(g.shake, 5);
+    } else if (kind === 'summon') {
+      for (let k = 0; k < 4; k++) {
+        const a = (k / 4) * Math.PI * 2 + 0.4;
+        create(g, 'hater', e.x + Math.cos(a) * 46, e.y + Math.sin(a) * 46);
+      }
+      UI.subtitle('"ME GUSTA HACER STREAM Y TROLLEAR AL CHAT."');
+      AudioFX.explode();
     }
   }
 
@@ -365,11 +494,15 @@ window.Enemies = (function () {
     }
 
     // proyectiles enemigos
-    const img = Sprites.get('oferta');
     for (const pr of eproj) {
+      const img = Sprites.get(pr.kind === 'dislike' ? 'dislike' : pr.kind === 'like' ? 'like' : 'oferta');
       ctx.save();
       ctx.translate(pr.x, pr.y);
-      ctx.rotate(Math.atan2(pr.vy, pr.vx));
+      if (pr.kind === 'oferta') ctx.rotate(Math.atan2(pr.vy, pr.vx));
+      else {
+        const wob = Math.sin(g.time * 9 + pr.x * 0.1) * 0.25;
+        ctx.rotate(wob);
+      }
       ctx.drawImage(img, -img.width / 2, -img.height / 2);
       ctx.restore();
     }
@@ -387,5 +520,5 @@ window.Enemies = (function () {
     }
   }
 
-  return { TYPES, reset, director, update, draw, create, eproj: () => eproj };
+  return { TYPES, reset, director, update, draw, create, eproj: () => eproj, waveComp, bossFor };
 })();

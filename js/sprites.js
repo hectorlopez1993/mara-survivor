@@ -90,7 +90,7 @@ window.Sprites = (function () {
     return ((v % m) + m) % m;
   }
 
-  function tileCanvas(sx, sy, rug, m, n, edge, parity) {
+  function tileCanvas(sx, sy, rug, m, n, edge, parity, biome) {
     const c = canvas(16, 16);
     const x = ctx2(c);
     if (rug) {
@@ -128,6 +128,39 @@ window.Sprites = (function () {
       if (edge & 2) rect(x, 15, 0, 1, 16, '#7a4dff');
       if (edge & 4) rect(x, 0, 0, 16, 1, '#7a4dff');
       if (edge & 8) rect(x, 0, 15, 16, 1, '#7a4dff');
+    } else if (biome === 'office') {
+      // moqueta de oficina: juntas cada 16 px y motas de desgaste
+      const h = hash2(sx * 23 + 5, sy * 41 + 11);
+      rect(x, 0, 0, 16, 16, h < 0.5 ? '#3a3f4b' : '#414755');
+      rect(x, 0, 0, 16, 1, '#2b303a');
+      rect(x, 0, 0, 1, 16, '#2b303a');
+      rect(x, 0, 15, 16, 1, '#48505f');
+      rect(x, 15, 0, 1, 16, '#48505f');
+      for (let i = 0; i < 5; i++) {
+        const px = mod(Math.floor(hash2(sx * 13 + i, sy * 7 + i * 3) * 14) + 1, 15);
+        const py = mod(Math.floor(hash2(sx * 5 + i * 2, sy * 19 + i) * 14) + 1, 15);
+        rect(x, px, py, 1, 1, i % 2 ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.16)');
+      }
+      if (hash2(sx * 3 + 1, sy * 29 + 4) > 0.82) {
+        rect(x, 3, 9, 10, 1, 'rgba(20,22,28,.35)');
+        rect(x, 6, 10, 5, 1, 'rgba(20,22,28,.28)');
+      }
+    } else if (biome === 'set') {
+      // plató: suelo oscuro con cinta de marcar y cables
+      const h = hash2(sx * 31 + 9, sy * 17 + 3);
+      rect(x, 0, 0, 16, 16, h < 0.5 ? '#241f2e' : '#2a2436');
+      rect(x, 0, 0, 16, 1, '#1a1622');
+      rect(x, 0, 0, 1, 16, '#1a1622');
+      rect(x, 0, 15, 16, 1, '#332c42');
+      rect(x, 15, 0, 1, 16, '#332c42');
+      if (h > 0.58) {
+        for (let i = 0; i < 6; i++) rect(x, 2 + i * 2, 4 + i, 3, 1, 'rgba(120,96,140,.22)');
+      }
+      if (hash2(sx + 21, sy + 33) > 0.8) {
+        rect(x, 11, 0, 2, 10, 'rgba(14,12,20,.55)');
+        rect(x, 12, 10, 2, 5, 'rgba(14,12,20,.4)');
+      }
+      if (hash2(sx * 7, sy * 7) > 0.9) rect(x, 6, 6, 4, 1, '#5a4a6a');
     } else {
       const h = hash2(sx * 17 + 3, sy * 31 + 7);
       const base = h < 0.33 ? '#4a2e1a' : h < 0.66 ? '#54341d' : '#5b3a22';
@@ -148,26 +181,28 @@ window.Sprites = (function () {
     return c;
   }
 
-  function tile(tx, ty) {
-    const rug = tx >= -12 && tx <= 12 && ty >= -12 && ty <= 12;
+  function tile(tx, ty, biome, rugR) {
+    const id = biome || 'cabin';
+    const R = rugR === undefined ? (id === 'cabin' ? 8 : 0) : rugR;
+    const rug = R > 0 && tx >= -R && tx <= R && ty >= -R && ty <= R;
     let key;
     let args;
     if (rug) {
       const m = mod(tx, 8);
       const n = mod(ty, 8);
-      const edge = (tx === -12 ? 1 : 0) | (tx === 12 ? 2 : 0) | (ty === -12 ? 4 : 0) | (ty === 12 ? 8 : 0);
+      const edge = (tx === -R ? 1 : 0) | (tx === R ? 2 : 0) | (ty === -R ? 4 : 0) | (ty === R ? 8 : 0);
       const parity = (tx + ty) & 1;
-      key = 'r' + m + ',' + n + ',' + edge + ',' + parity;
-      args = [mod(tx, 4), mod(ty, 4), true, m, n, edge, parity];
+      key = id + 'r' + m + ',' + n + ',' + edge + ',' + parity;
+      args = [mod(tx, 4), mod(ty, 4), true, m, n, edge, parity, id];
     } else {
       const sx = mod(tx, 4);
       const sy = mod(ty, 4);
-      key = 'w' + sx + ',' + sy;
-      args = [sx, sy, false, 0, 0, 0, 0];
+      key = id + 'w' + sx + ',' + sy;
+      args = [sx, sy, false, 0, 0, 0, 0, id];
     }
     let c = cache[key];
     if (!c) {
-      c = tileCanvas(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+      c = tileCanvas(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
       cache[key] = c;
     }
     return c;
@@ -424,8 +459,179 @@ window.Sprites = (function () {
     return c;
   }
 
-  function enemyOferta() {
+  // ---------- enemigos nuevos ----------
+  function enemyHater() {
+    const c = canvas(16, 16);
+    const x = ctx2(c);
+    // sudadera con capucha
+    rect(x, 3, 8, 10, 8, '#0b0b12');
+    rect(x, 4, 9, 8, 7, '#3a3a4a');
+    rect(x, 5, 10, 6, 2, '#4a4a5c');
+    // cabeza
+    rect(x, 4, 2, 8, 8, '#0b0b12');
+    rect(x, 5, 3, 6, 6, '#e8c9a8');
+    rect(x, 4, 2, 8, 2, '#2a2a33');
+    // ojos cansados + ojeras
+    rect(x, 6, 5, 1, 1, '#22222b');
+    rect(x, 9, 5, 1, 1, '#22222b');
+    rect(x, 6, 6, 1, 1, '#8c6c8a');
+    rect(x, 9, 6, 1, 1, '#8c6c8a');
+    // boca hacia abajo
+    rect(x, 7, 8, 3, 1, '#5a3a1a');
+    rect(x, 7, 7, 1, 1, '#5a3a1a');
+    rect(x, 9, 7, 1, 1, '#5a3a1a');
+    // móvil con dislike
+    rect(x, 12, 7, 4, 6, '#0b0b12');
+    rect(x, 13, 8, 2, 3, '#ff4d6d');
+    rect(x, 13, 11, 2, 1, '#5c5a70');
+    return c;
+  }
+
+  function enemyReclutador() {
+    const c = canvas(18, 22);
+    const x = ctx2(c);
+    // traje
+    rect(x, 3, 9, 12, 10, '#0b0b12');
+    rect(x, 4, 10, 10, 9, '#2a2a3a');
+    rect(x, 6, 10, 6, 7, '#f4f0ff');
+    rect(x, 8, 10, 2, 4, '#c43e3e');
+    // cabeza
+    rect(x, 5, 1, 8, 8, '#0b0b12');
+    rect(x, 6, 2, 6, 6, '#f6cba4');
+    rect(x, 5, 1, 8, 2, '#1c1c26');
+    rect(x, 6, 1, 6, 1, '#5c5a70');
+    // sonrisa de comercial
+    rect(x, 7, 4, 1, 1, '#22222b');
+    rect(x, 10, 4, 1, 1, '#22222b');
+    rect(x, 7, 6, 4, 1, '#f4f0ff');
+    // carpeta en la mano
+    rect(x, 13, 12, 5, 7, '#0b0b12');
+    rect(x, 14, 13, 3, 5, '#c9a45c');
+    rect(x, 14, 14, 3, 1, '#8c6c42');
+    // piernas
+    rect(x, 4, 19, 4, 3, '#0b0b12');
+    rect(x, 10, 19, 4, 3, '#0b0b12');
+    return c;
+  }
+
+  function enemyInfluencer() {
+    const c = canvas(16, 20);
+    const x = ctx2(c);
+    // pelo largo
+    rect(x, 3, 1, 10, 9, '#0b0b12');
+    rect(x, 4, 2, 8, 7, '#c9b6ee');
+    // cara
+    rect(x, 5, 3, 6, 6, '#f6cba4');
+    rect(x, 5, 2, 6, 2, '#b9a0e6');
+    rect(x, 6, 5, 1, 1, '#22222b');
+    rect(x, 9, 5, 1, 1, '#22222b');
+    rect(x, 7, 7, 3, 1, '#ff4d6d');
+    // cuerpo con top brillante
+    rect(x, 3, 9, 10, 8, '#0b0b12');
+    rect(x, 4, 10, 8, 7, '#8b5cf6');
+    rect(x, 4, 10, 8, 1, '#bf94ff');
+    // aro de luz / anillo de stream
+    rect(x, 1, 0, 1, 1, '#ffe45e');
+    rect(x, 13, 1, 1, 1, '#ffe45e');
+    rect(x, 0, 3, 1, 1, '#ffe45e');
+    rect(x, 14, 4, 1, 1, '#ffe45e');
+    // piernas
+    rect(x, 5, 17, 3, 3, '#0b0b12');
+    rect(x, 9, 17, 3, 3, '#0b0b12');
+    return c;
+  }
+
+  function enemyPelirroja() {
+    const c = canvas(26, 28);
+    const x = ctx2(c);
+    // melena pelirroja larga (la firma del personaje)
+    rect(x, 2, 1, 22, 13, '#0b0b12');
+    rect(x, 3, 2, 20, 11, '#d6303e');
+    rect(x, 3, 8, 5, 12, '#b02434');
+    rect(x, 18, 8, 5, 12, '#b02434');
+    rect(x, 5, 2, 16, 4, '#ff5f6d');
+    rect(x, 4, 3, 3, 8, '#ff7a86');
+    // cara
+    rect(x, 7, 4, 12, 10, '#0b0b12');
+    rect(x, 8, 5, 10, 8, '#f6cba4');
+    rect(x, 8, 4, 10, 2, '#c43e3e');
+    // ojos y sonrisa chulesca
+    rect(x, 9, 7, 2, 2, '#f4f0ff');
+    rect(x, 14, 7, 2, 2, '#f4f0ff');
+    rect(x, 10, 7, 1, 1, '#22222b');
+    rect(x, 15, 7, 1, 1, '#22222b');
+    rect(x, 10, 11, 6, 1, '#8c1a2a');
+    rect(x, 12, 12, 3, 1, '#ff7a86');
+    // auriculares de stream
+    rect(x, 6, 3, 3, 4, '#22222b');
+    rect(x, 17, 3, 3, 4, '#22222b');
+    rect(x, 4, 2, 2, 2, '#ff4d6d');
+    rect(x, 20, 2, 2, 2, '#ff4d6d');
+    // torso: sudadera rosa
+    rect(x, 3, 14, 20, 10, '#0b0b12');
+    rect(x, 4, 15, 18, 9, '#ff4d6d');
+    rect(x, 4, 15, 18, 2, '#ff9bb0');
+    rect(x, 11, 17, 4, 3, '#f4f0ff');
+    // corazón en el pecho
+    rect(x, 12, 22, 2, 2, '#ffd24a');
+    // piernas
+    rect(x, 6, 24, 5, 4, '#0b0b12');
+    rect(x, 14, 24, 5, 4, '#0b0b12');
+    return c;
+  }
+
+  function projDislike() {
     const c = canvas(8, 8);
+    const x = ctx2(c);
+    rect(x, 0, 0, 8, 8, '#0b0b12');
+    rect(x, 1, 1, 6, 6, '#3a1a24');
+    // pulgar abajo en rojo
+    rect(x, 3, 2, 2, 4, '#ff4d6d');
+    rect(x, 2, 5, 4, 1, '#ff4d6d');
+    rect(x, 5, 3, 1, 2, '#c43e3e');
+    return c;
+  }
+
+  function projLike() {
+    const c = canvas(8, 8);
+    const x = ctx2(c);
+    // corazón
+    rect(x, 1, 1, 2, 2, '#ff4d6d');
+    rect(x, 5, 1, 2, 2, '#ff4d6d');
+    rect(x, 1, 2, 6, 2, '#ff4d6d');
+    rect(x, 2, 4, 4, 1, '#ff4d6d');
+    rect(x, 3, 5, 2, 1, '#ff4d6d');
+    rect(x, 1, 1, 1, 1, '#ff9bb0');
+    rect(x, 2, 2, 2, 1, '#ff9bb0');
+    return c;
+  }
+
+  function projTaper() {
+    const c = canvas(10, 10);
+    const x = ctx2(c);
+    rect(x, 1, 3, 8, 6, '#0b0b12');
+    rect(x, 2, 4, 6, 4, '#c9884a');
+    rect(x, 2, 4, 6, 1, '#e8b06a');
+    rect(x, 3, 6, 4, 1, '#f4e7d3');
+    rect(x, 1, 2, 8, 1, '#5c3a1a');
+    rect(x, 7, 1, 2, 1, '#8c5a2c');
+    return c;
+  }
+
+  function projVaso() {
+    const c = canvas(10, 10);
+    const x = ctx2(c);
+    // vaso corto con líquido ámbar
+    rect(x, 2, 1, 6, 8, '#0b0b12');
+    rect(x, 3, 2, 4, 6, 'rgba(210,230,240,.45)');
+    rect(x, 3, 4, 4, 4, '#e0a83c');
+    rect(x, 3, 2, 4, 1, '#fff2c4');
+    rect(x, 3, 2, 1, 6, 'rgba(255,255,255,.55)');
+    rect(x, 1, 0, 8, 1, '#f4f0ff');
+    return c;
+  }
+
+  function enemyOferta() {    const c = canvas(8, 8);
     const x = ctx2(c);
     rect(x, 0, 1, 8, 6, '#0b0b12');
     rect(x, 1, 2, 6, 4, '#f4e7d3');
@@ -639,6 +845,145 @@ window.Sprites = (function () {
     return c;
   }
 
+  // ---------- cabaña ----------
+  function obsSillon() {
+    const c = canvas(22, 18);
+    const x = ctx2(c);
+    rect(x, 1, 2, 20, 13, '#0b0b12');
+    rect(x, 2, 3, 18, 11, '#5c3550');
+    rect(x, 2, 3, 18, 4, '#6b3f5c');
+    rect(x, 2, 8, 18, 5, '#8a5578');
+    rect(x, 3, 9, 7, 3, '#9c6489');
+    rect(x, 11, 9, 7, 3, '#9c6489');
+    rect(x, 0, 7, 3, 8, '#4a2a44');
+    rect(x, 19, 7, 3, 8, '#4a2a44');
+    rect(x, 3, 15, 3, 3, '#2a1a26');
+    rect(x, 16, 15, 3, 3, '#2a1a26');
+    rect(x, 4, 5, 14, 1, 'rgba(255,255,255,.08)');
+    return c;
+  }
+
+  function pelucheOso() {
+    const c = canvas(12, 12);
+    const x = ctx2(c);
+    rect(x, 1, 1, 2, 2, '#8c5a2c');
+    rect(x, 9, 1, 2, 2, '#8c5a2c');
+    rect(x, 2, 1, 8, 7, '#0b0b12');
+    rect(x, 3, 2, 6, 5, '#a06a32');
+    rect(x, 4, 4, 1, 1, '#22222b');
+    rect(x, 7, 4, 1, 1, '#22222b');
+    rect(x, 5, 5, 2, 1, '#5c3a1a');
+    rect(x, 3, 7, 6, 4, '#0b0b12');
+    rect(x, 4, 8, 4, 3, '#8c5a2c');
+    return c;
+  }
+
+  function pelucheConejo() {
+    const c = canvas(12, 12);
+    const x = ctx2(c);
+    rect(x, 3, 0, 2, 5, '#f4e7d3');
+    rect(x, 7, 0, 2, 5, '#f4e7d3');
+    rect(x, 3, 1, 1, 3, '#f2a0b8');
+    rect(x, 8, 1, 1, 3, '#f2a0b8');
+    rect(x, 2, 4, 8, 6, '#0b0b12');
+    rect(x, 3, 5, 6, 4, '#f4e7d3');
+    rect(x, 4, 6, 1, 1, '#22222b');
+    rect(x, 7, 6, 1, 1, '#22222b');
+    rect(x, 5, 7, 2, 1, '#f2a0b8');
+    rect(x, 3, 9, 6, 2, '#d9c8ae');
+    return c;
+  }
+
+  function peluchePingu() {
+    const c = canvas(12, 12);
+    const x = ctx2(c);
+    rect(x, 2, 1, 8, 10, '#0b0b12');
+    rect(x, 3, 2, 6, 8, '#1c1c26');
+    rect(x, 4, 4, 4, 5, '#f4f0ff');
+    rect(x, 4, 3, 1, 1, '#f4f0ff');
+    rect(x, 7, 3, 1, 1, '#f4f0ff');
+    rect(x, 4, 3, 1, 1, '#22222b');
+    rect(x, 7, 3, 1, 1, '#22222b');
+    rect(x, 5, 5, 2, 1, '#ffb03a');
+    rect(x, 3, 10, 2, 1, '#ffb03a');
+    rect(x, 7, 10, 2, 1, '#ffb03a');
+    return c;
+  }
+
+  function peluchePulpo() {
+    const c = canvas(12, 12);
+    const x = ctx2(c);
+    rect(x, 2, 2, 8, 6, '#0b0b12');
+    rect(x, 3, 3, 6, 4, '#8b5cf6');
+    rect(x, 4, 4, 1, 1, '#f4f0ff');
+    rect(x, 7, 4, 1, 1, '#f4f0ff');
+    rect(x, 4, 6, 4, 1, '#6a3fc9');
+    rect(x, 2, 8, 2, 3, '#6a3fc9');
+    rect(x, 4, 8, 2, 4, '#8b5cf6');
+    rect(x, 6, 8, 2, 3, '#6a3fc9');
+    rect(x, 8, 8, 2, 4, '#8b5cf6');
+    return c;
+  }
+
+  // ---------- oficina / plató ----------
+  function obsEscritorio() {
+    const c = canvas(24, 18);
+    const x = ctx2(c);
+    rect(x, 0, 8, 24, 3, '#0b0b12');
+    rect(x, 1, 8, 22, 1, '#8c5a28');
+    rect(x, 1, 9, 22, 1, '#5c3a1a');
+    rect(x, 2, 11, 3, 7, '#3a2414');
+    rect(x, 19, 11, 3, 7, '#3a2414');
+    rect(x, 6, 0, 12, 9, '#0b0b12');
+    rect(x, 7, 1, 10, 7, '#2a2a33');
+    rect(x, 8, 2, 8, 5, '#2c4a5a');
+    rect(x, 9, 3, 5, 1, '#5ce1ff');
+    rect(x, 4, 7, 3, 2, '#f4e7d3');
+    rect(x, 17, 7, 3, 2, '#f4e7d3');
+    return c;
+  }
+
+  function obsCamara() {
+    const c = canvas(18, 14);
+    const x = ctx2(c);
+    rect(x, 1, 3, 16, 9, '#0b0b12');
+    rect(x, 2, 4, 14, 7, '#2a2a33');
+    rect(x, 3, 5, 7, 5, '#14141a');
+    rect(x, 4, 6, 5, 3, '#3a4a6a');
+    rect(x, 5, 7, 2, 1, '#8fdcff');
+    rect(x, 11, 6, 3, 2, '#ff4d6d');
+    rect(x, 11, 9, 3, 1, '#5c5a70');
+    rect(x, 0, 11, 18, 1, '#0b0b12');
+    return c;
+  }
+
+  function obsTripoide() {
+    const c = canvas(16, 20);
+    const x = ctx2(c);
+    rect(x, 6, 0, 4, 3, '#2a2a33');
+    rect(x, 7, 3, 2, 5, '#3a3a44');
+    rect(x, 3, 7, 2, 13, '#2a2a33');
+    rect(x, 11, 7, 2, 13, '#2a2a33');
+    rect(x, 7, 8, 2, 12, '#3a3a44');
+    rect(x, 2, 19, 4, 1, '#0b0b12');
+    rect(x, 10, 19, 4, 1, '#0b0b12');
+    rect(x, 6, 19, 4, 1, '#0b0b12');
+    return c;
+  }
+
+  function obsFoco() {
+    const c = canvas(14, 20);
+    const x = ctx2(c);
+    rect(x, 6, 10, 2, 9, '#0b0b12');
+    rect(x, 4, 19, 6, 1, '#0b0b12');
+    rect(x, 2, 1, 10, 8, '#0b0b12');
+    rect(x, 3, 2, 8, 6, '#3a3850');
+    rect(x, 4, 3, 6, 4, '#ffe45e');
+    rect(x, 5, 4, 4, 2, '#fff8b8');
+    rect(x, 5, 8, 4, 2, '#5c5a70');
+    return c;
+  }
+
   function pickupXP(color, accent, face) {
     const c = canvas(12, 14);
     const x = ctx2(c);
@@ -839,6 +1184,61 @@ window.Sprites = (function () {
         rect(x, 1, 7, 3, 2, '#f4f0ff');
         rect(x, 12, 7, 3, 2, '#f4f0ff');
         break;
+      case 'taper':
+        rect(x, 2, 4, 12, 9, '#0b0b12');
+        rect(x, 3, 5, 10, 7, '#c9884a');
+        rect(x, 3, 5, 10, 1, '#e8b06a');
+        rect(x, 4, 8, 8, 2, '#f4e7d3');
+        rect(x, 5, 8, 2, 2, '#3fae6a');
+        rect(x, 8, 8, 2, 2, '#ff4d6d');
+        rect(x, 2, 3, 12, 1, '#5c3a1a');
+        rect(x, 11, 2, 3, 1, '#8c5a2c');
+        break;
+      case 'vaso':
+        rect(x, 4, 2, 8, 12, '#0b0b12');
+        rect(x, 5, 3, 6, 9, 'rgba(210,230,240,.5)');
+        rect(x, 5, 7, 6, 5, '#e0a83c');
+        rect(x, 5, 3, 6, 1, '#fff2c4');
+        rect(x, 5, 3, 1, 9, 'rgba(255,255,255,.6)');
+        rect(x, 3, 1, 10, 1, '#f4f0ff');
+        rect(x, 11, 2, 2, 7, 'rgba(255,255,255,.35)');
+        break;
+      case 'lanza':
+        rect(x, 2, 12, 10, 2, '#8c5a2c');
+        rect(x, 3, 11, 9, 1, '#c9884a');
+        rect(x, 10, 2, 4, 4, '#f4f0ff');
+        rect(x, 11, 1, 2, 2, '#ffd24a');
+        rect(x, 9, 4, 2, 2, '#ff4d6d');
+        rect(x, 12, 5, 2, 2, '#ff4d6d');
+        rect(x, 8, 6, 2, 2, '#ff4d6d');
+        rect(x, 4, 13, 2, 2, '#5c3a1a');
+        break;
+      case 'mochila':
+        rect(x, 3, 3, 10, 11, '#0b0b12');
+        rect(x, 4, 4, 8, 9, '#3c5aa6');
+        rect(x, 4, 6, 8, 2, '#5a7ad0');
+        rect(x, 6, 1, 4, 2, '#2a3a6a');
+        rect(x, 5, 9, 6, 3, '#2a3a6a');
+        rect(x, 10, 9, 2, 2, '#ffd24a');
+        rect(x, 5, 12, 2, 2, '#3c5aa6');
+        break;
+      case 'hielo':
+        rect(x, 3, 3, 4, 4, '#bfeaff');
+        rect(x, 9, 3, 4, 4, '#bfeaff');
+        rect(x, 6, 6, 4, 4, '#5ce1ff');
+        rect(x, 4, 8, 8, 4, '#8fdcff');
+        rect(x, 6, 9, 4, 2, '#d9f6ff');
+        rect(x, 7, 2, 2, 2, '#f4f0ff');
+        break;
+      case 'corazon':
+        rect(x, 3, 3, 4, 4, '#ff4d6d');
+        rect(x, 9, 3, 4, 4, '#ff4d6d');
+        rect(x, 2, 5, 12, 5, '#ff4d6d');
+        rect(x, 3, 9, 10, 2, '#c43e3e');
+        rect(x, 5, 11, 6, 2, '#c43e3e');
+        rect(x, 7, 13, 2, 1, '#c43e3e');
+        rect(x, 4, 4, 2, 2, '#ff9bb0');
+        break;
       case 'bits':
         rect(x, 7, 1, 2, 14, '#0b0b12');
         rect(x, 3, 4, 10, 8, '#0b0b12');
@@ -890,6 +1290,15 @@ window.Sprites = (function () {
       case 'picao': return enemyPicao();
       case 'manifestante': return enemyManifestante();
       case 'burocracia': return enemyBurocracia();
+      case 'hater': return enemyHater();
+      case 'reclutador': return enemyReclutador();
+      case 'influencer': return enemyInfluencer();
+      case 'pelirroja': return enemyPelirroja();
+      case 'dislike': return projDislike();
+      case 'like': return projLike();
+      case 'taper': return projTaper();
+      case 'vaso': return projVaso();
+      case 'heart': return projLike();
       case 'oferta': return enemyOferta();
       // Objetos de oficina
       case 'impresora': return obsImpresora();
@@ -905,6 +1314,15 @@ window.Sprites = (function () {
       case 'tvstream': return obsTvstream();
       case 'gato': return obsGato();
       case 'lampara': return obsLampara();
+      case 'sillon': return obsSillon();
+      case 'escritorio': return obsEscritorio();
+      case 'camara': return obsCamara();
+      case 'tripoide': return obsTripoide();
+      case 'foco': return obsFoco();
+      case 'peluche_oso': return pelucheOso();
+      case 'peluche_conejo': return pelucheConejo();
+      case 'peluche_pingu': return peluchePingu();
+      case 'peluche_pulpo': return peluchePulpo();
       // Pickup items
       case 'xp_blue': return pickupXP('#5ce1ff', '#bfeaff', true);
       case 'xp_green': return pickupXP('#3dffb0', '#c9ffe9', true);
